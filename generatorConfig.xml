@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+    <!--
+        MyBatis 反向工程配置文件
+        作用: 读取 store_manager 库的表结构, 自动生成 实体类 + Mapper接口 + MapperXML
+        目标模式: MyBatis3Simple = 只生成基础 CRUD(insert/selectByPrimaryKey/update/delete/selectAll), 不带 Example 类
+    -->
+    <context id="mysqlContext" targetRuntime="MyBatis3Simple" defaultModelType="flat">
+
+        <!-- 让生成的 SQL 里表名/字段名用反引号包起来, 避免 user 等关键字冲突
+             注意: property 必须放在 jdbcConnection 之前(DTD 规定顺序) -->
+        <property name="beginningDelimiter" value="`"/>
+        <property name="endingDelimiter" value="`"/>
+
+        <!-- 数据库连接信息(和你的 MySQL 一致) -->
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+                        connectionURL="jdbc:mysql://localhost:3306/store_manager?useSSL=false&amp;serverTimezone=Asia/Shanghai&amp;characterEncoding=utf8"
+                        userId="root"
+                        password="123456"/>
+
+        <!-- DECIMAL 字段映射成 BigDecimal(金额精度不丢) -->
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="true"/>
+        </javaTypeResolver>
+
+        <!-- 1) 实体类生成到: src/main/java/com/wjy/storemanager/entity -->
+        <javaModelGenerator targetPackage="com.wjy.storemanager.entity"
+                            targetProject="src/main/java">
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <!-- 2) Mapper XML 生成到: src/main/resources/mapper -->
+        <sqlMapGenerator targetPackage="mapper"
+                         targetProject="src/main/resources"/>
+
+        <!-- 3) Mapper 接口生成到: src/main/java/com/wjy/storemanager/mapper -->
+        <javaClientGenerator type="ANNOTATEDMAPPER"
+                             targetPackage="com.wjy.storemanager.mapper"
+                             targetProject="src/main/java"/>
+
+        <!-- 要生成的 11 张表(表名自动转驼峰: purchase_order -> PurchaseOrder) -->
+        <table tableName="role"/>
+        <table tableName="user"/>
+        <table tableName="operation_log"/>
+        <table tableName="category"/>
+        <table tableName="product"/>
+        <table tableName="supplier"/>
+        <table tableName="purchase_order"/>
+        <table tableName="purchase_order_detail"/>
+        <table tableName="sale_order"/>
+        <table tableName="sale_order_detail"/>
+        <table tableName="stock_record"/>
+    </context>
+</generatorConfiguration>
