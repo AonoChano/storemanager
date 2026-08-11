@@ -2,12 +2,8 @@ package com.wjy.storemanager.mapper;
 
 import com.wjy.storemanager.entity.User;
 import java.util.List;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+
+import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.type.JdbcType;
 
 public interface UserMapper {
@@ -101,4 +97,11 @@ public interface UserMapper {
         "where id = #{id,jdbcType=BIGINT}"
     })
     int updateByPrimaryKey(User row);
+    /**
+     * 按用户名查用户,登录
+     */
+    @Select("select * from user where username=#{username}")
+    User selectByUserName(@Param("username")String name);
+
+
 }

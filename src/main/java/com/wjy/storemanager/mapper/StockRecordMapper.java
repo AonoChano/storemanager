@@ -2,12 +2,9 @@ package com.wjy.storemanager.mapper;
 
 import com.wjy.storemanager.entity.StockRecord;
 import java.util.List;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+
+import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.jdbc.Null;
 import org.apache.ibatis.type.JdbcType;
 
 public interface StockRecordMapper {
@@ -113,4 +110,19 @@ public interface StockRecordMapper {
         "where id = #{id,jdbcType=BIGINT}"
     })
     int updateByPrimaryKey(StockRecord row);
+
+
+    //动态查询流水
+ @Select({"<script>",
+         "select sr.*,p.name from stock_record as sr ",
+         "left join product as p on sr.product_id=p.id",
+         "<where>",
+         "<if test=\"productId!=null\"> and sr.product_id=#{productId}</if>",
+         "<if test=\"type!=null\">and sr.type=#{type}</if>",
+         "</where>",
+         "order by sr.id desc",
+         "</script>"})
+List<StockRecord> selectStockRecord(@Param("productId")Long productId,
+                                    @Param("type")Byte type);
+
 }

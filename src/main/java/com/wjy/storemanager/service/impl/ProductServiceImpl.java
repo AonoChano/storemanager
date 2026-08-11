@@ -44,4 +44,10 @@ public class ProductServiceImpl implements ProductService {
     public List<Product> selectAll(String name,Long categoryId,String barcode) {
         return productMapper.selectAll( name, categoryId, barcode);
     }
+
+
+    @Override
+    public List<Product> selectWarning() {
+        return productMapper.selectWarning();
+    }
 }

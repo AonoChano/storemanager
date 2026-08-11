@@ -2,12 +2,8 @@ package com.wjy.storemanager.mapper;
 
 import com.wjy.storemanager.entity.SaleOrder;
 import java.util.List;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import com.wjy.storemanager.vo.SaleReportVo;
+import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.type.JdbcType;
 
 public interface SaleOrderMapper {
@@ -29,6 +25,7 @@ public interface SaleOrderMapper {
      *
      * @mbg.generated Mon Aug 10 14:56:46 CST 2026
      */
+    @Options(useGeneratedKeys = true,keyProperty = "id")
     @Insert({
         "insert into sale_order (id, order_no, ",
         "customer_name, total_amount, ",
@@ -109,6 +106,14 @@ public interface SaleOrderMapper {
 
 
 
+    //视图:视图表单
+    @Select("select date_format(create_time,'%Y-%m-%d') as day, " +
+            "count(*) as orderCount, " +
+            "sum(total_amount) as totalAmount from sale_order " +
+            "where status =1 " +
+            "group by date_format(create_time,'%Y-%m-%d') " +//此处不能直接用day因为字段别名生成顺序比group by靠后
+            "order by day desc ")
+    List<SaleReportVo> saleReportVoByDay();
 
 
 

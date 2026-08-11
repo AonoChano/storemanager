@@ -16,6 +16,7 @@ public interface ProductService {
     //查所有
     List<Product> selectAll(String name,Long categoryId,String barcode);
 
-
+//查找预警
+    List<Product>selectWarning();
 
 }

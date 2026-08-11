@@ -152,8 +152,9 @@ public interface ProductMapper {
     int updateStock(@Param("delta")Integer delta,
                     @Param("id")Long id);
 
-
-
+//阈值预警
+@Select("select * from product where stock < warning_threshold")
+    List<Product>selectWarning();
 
 
 

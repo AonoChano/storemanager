@@ -71,7 +71,7 @@ public interface OperationLogMapper {
     @Select({
         "select",
         "id, user_id, username, module, action, ip, create_time",
-        "from operation_log"
+        "from operation_log order by id desc"
     })
     @Results({
         @Result(column="id", property="id", jdbcType=JdbcType.BIGINT, id=true),

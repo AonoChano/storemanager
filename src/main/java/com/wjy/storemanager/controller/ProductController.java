@@ -36,12 +36,18 @@ public class ProductController {
     public Result<Product>select(@PathVariable("id") long id){
         return Result.success(productService.select(id));
     }
-    //查所有
+    //查所有,动态sql
     @GetMapping("/list")
     public Result<List<Product>>selectAll(@RequestParam(required = false) String name,
                                           @RequestParam(required = false) Long categoryId,
                                           @RequestParam(required = false) String barcode){
         return Result.success(productService.selectAll(name,categoryId,barcode));
     }
+
+    @GetMapping("/warning")
+    public Result<List<Product>> selectWarning(){
+        return Result.success(productService.selectWarning());
+    }
+
 
 }

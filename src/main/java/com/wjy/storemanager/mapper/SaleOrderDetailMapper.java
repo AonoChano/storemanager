@@ -2,6 +2,8 @@ package com.wjy.storemanager.mapper;
 
 import com.wjy.storemanager.entity.SaleOrderDetail;
 import java.util.List;
+
+import com.wjy.storemanager.vo.ProfitVo;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Result;
@@ -98,4 +100,15 @@ public interface SaleOrderDetailMapper {
         "where id = #{id,jdbcType=BIGINT}"
     })
     int updateByPrimaryKey(SaleOrderDetail row);
+
+
+
+    //毛利方法
+    @Select("select sum(sod.amount) as revenue," +
+            "sum(p.purchase_price*sod.quantity) as cost," +
+            "sum((sod.price - p.purchase_price)*sod.quantity) as profit" +
+            " from sale_order_detail as sod left join product as p on sod.product_id=p.id")
+    ProfitVo profitReportVo();
+
+
 }

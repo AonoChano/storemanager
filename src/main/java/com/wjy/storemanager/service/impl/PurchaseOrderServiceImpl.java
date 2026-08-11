@@ -42,7 +42,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         Order.setTotalAmount(total);
         Order.setOrderNo("P0"+System.currentTimeMillis());//订单编号用P0加时间戳,后期我想改成雪花算法
-        Order.setStatus((byte)0);//状态未入库
+        Order.setStatus((byte)1);//状态已入库
         Order.setOperatorId(1L);//还没写登录先用1L
         Order.setCreateTime(new Date());
         //调用方法把初始化好的订单先插入purchaseOrder
