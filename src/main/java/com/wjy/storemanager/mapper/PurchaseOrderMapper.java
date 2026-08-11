@@ -2,12 +2,8 @@ package com.wjy.storemanager.mapper;
 
 import com.wjy.storemanager.entity.PurchaseOrder;
 import java.util.List;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+
+import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.type.JdbcType;
 
 public interface PurchaseOrderMapper {
@@ -29,6 +25,7 @@ public interface PurchaseOrderMapper {
      *
      * @mbg.generated Mon Aug 10 14:56:46 CST 2026
      */
+    @Options(useGeneratedKeys = true,keyProperty = "id")
     @Insert({
         "insert into purchase_order (id, order_no, ",
         "supplier_id, total_amount, ",

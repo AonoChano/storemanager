@@ -106,4 +106,10 @@ public interface SaleOrderMapper {
         "where id = #{id,jdbcType=BIGINT}"
     })
     int updateByPrimaryKey(SaleOrder row);
+
+
+
+
+
+
 }
