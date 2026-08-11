@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>进销存管理系统 · 演示页</title>
+<style>
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; margin: 0; background: #f5f6fa; color: #333; }
+  header { background: #2c3e50; color: #fff; padding: 14px 24px; }
+  header h1 { margin: 0; font-size: 18px; }
+  header span { font-size: 12px; color: #aab; margin-left: 12px; }
+  main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+  .card { background: #fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .card h2 { margin: 0 0 12px; font-size: 16px; border-left: 4px solid #3498db; padding-left: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; white-space: nowrap; }
+  th { background: #f0f2f5; }
+  input, select, button { padding: 6px 10px; margin: 2px 4px 2px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; box-sizing: border-box; }
+  input { width: 110px; }
+  button { background: #3498db; color: #fff; border: none; cursor: pointer; }
+  button:hover { opacity: .9; }
+  button.gray { background: #95a5a6; }
+  .warn { color: #e74c3c; font-weight: bold; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .row label { font-size: 13px; color: #666; }
+  .tag { background: #eef2f7; border-radius: 4px; padding: 2px 6px; font-size: 12px; }
+  #profitInfo { margin: 8px 0; font-size: 14px; }
+  .msg { color: #27ae60; }
+  .err { color: #e74c3c; }
+</style>
+</head>
+<body>
+<header><h1>进销存管理系统 · 前端演示<span>纯前端调用后端接口验证</span></h1></header>
+<main>
+
+  <!-- 用户登录(门禁, 不登录看不到主内容) -->
+  <div id="loginCard" class="card" style="max-width:420px;margin:80px auto;">
+    <h2>用户登录</h2>
+    <div class="row">
+      <input id="loginUser" placeholder="用户名">
+      <input id="loginPass" placeholder="密码" type="password">
+      <button onclick="doLogin()">登录</button>
+      <span id="loginMsg"></span>
+    </div>
+    <div class="tag">默认账号 admin / 123456</div>
+  </div>
+
+  <!-- 主内容(登录成功后显示) -->
+  <div id="app" style="display:none">
+  <div class="card" style="background:#eaf6ee;">
+    <b id="welcomeText"></b>
+    <button onclick="logout()" style="background:#95a5a6;">退出登录</button>
+  </div>
+
+  <!-- 商品管理 -->
+  <div class="card">
+    <h2>商品管理</h2>
+    <div class="row">
+      <input id="searchName" placeholder="按名称搜索">
+      <button onclick="loadProducts()">搜索</button>
+      <button class="gray" onclick="loadProductOptions()">刷新商品下拉</button>
+      <span class="tag">库存低于预警线会标红</span>
+      <span id="productMsg"></span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>名称</th><th>条码</th><th>分类</th><th>规格</th><th>单位</th><th>进价</th><th>售价</th><th>库存</th><th>预警线</th><th>状态</th></tr></thead>
+      <tbody id="productBody"></tbody>
+    </table>
+    <div class="row" style="margin-top:12px;">
+      <label>新增商品:</label>
+      <input id="pName" placeholder="名称">
+      <input id="pBarcode" placeholder="条码">
+      <select id="pCategory"></select>
+      <input id="pSpec" placeholder="规格">
+      <input id="pUnit" placeholder="单位">
+      <input id="pPurchase" placeholder="进价" type="number" step="0.01">
+      <input id="pSale" placeholder="售价" type="number" step="0.01">
+      <input id="pWarn" placeholder="预警阈值" type="number">
+      <button onclick="addProduct()">新增</button>
+    </div>
+  </div>
+
+  <!-- 采购入库 -->
+  <div class="card">
+    <h2>采购入库</h2>
+    <div class="row">
+      <label>供应商:</label>
+      <select id="poSupplier"></select>
+      <input id="poNewSupplier" placeholder="新供应商名(可选)">
+      <button class="gray" onclick="addSupplier()">添加供应商</button>
+    </div>
+    <div class="row">
+      <label>商品:</label>
+      <select id="poProduct"></select>
+      <input id="poQty" placeholder="数量" type="number" value="10">
+      <input id="poPrice" placeholder="进价(自动带出)" type="number" step="0.01">
+      <button onclick="doPurchase()">采购入库</button>
+      <span id="purchaseMsg"></span>
+    </div>
+  </div>
+
+  <!-- 销售出库 -->
+  <div class="card">
+    <h2>销售出库</h2>
+    <div class="row">
+      <label>客户:</label>
+      <input id="soCustomer" placeholder="客户名称">
+      <label>商品:</label>
+      <select id="soProduct"></select>
+      <input id="soQty" placeholder="数量" type="number" value="1">
+      <input id="soPrice" placeholder="售价(自动带出)" type="number" step="0.01">
+      <button onclick="doSale()">销售出库</button>
+      <span id="saleMsg"></span>
+    </div>
+  </div>
+
+  <!-- 出入库流水 -->
+  <div class="card">
+    <h2>出入库流水</h2>
+    <div class="row">
+      <button class="gray" onclick="loadRecords()">刷新流水</button>
+      <span class="tag">最近记录在上面</span>
+    </div>
+    <table>
+      <thead><tr><th>时间</th><th>商品</th><th>类型</th><th>数量</th><th>变动后库存</th><th>业务</th></tr></thead>
+      <tbody id="recordBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 报表 -->
+  <div class="card">
+    <h2>报表统计</h2>
+    <div class="row">
+      <button class="gray" onclick="loadReports()">刷新报表</button>
+    </div>
+    <div id="profitInfo"></div>
+    <table>
+      <thead><tr><th>日期</th><th>单数</th><th>销售额</th></tr></thead>
+      <tbody id="reportBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 操作日志 -->
+  <div class="card">
+    <h2>操作日志</h2>
+    <div class="row">
+      <button class="gray" onclick="loadLogs()">刷新日志</button>
+      <span class="tag">采购/销售等操作会自动记录</span>
+    </div>
+    <table>
+      <thead><tr><th>时间</th><th>操作人</th><th>操作描述</th><th>方法</th><th>IP</th></tr></thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+  </div><!-- /app -->
+
+</main>
+
+<script>
+// ========== 公共工具 ==========
+// 登录后带上 token + 当前用户
+function authHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;   // 拦截器验这个
+  if (currentUser) {
+    h['X-User-Id'] = currentUser.id;                    // 操作日志用
+    h['X-User-Name'] = currentUser.username;
+  }
+  return h;
+}
+function handleSessionExpired() {
+  alert('登录已过期，请重新登录');
+  logout();
+}
+async function get(url) {
+  const r = await fetch(url, { headers: authHeaders() });
+  const j = await r.json();
+  if (j.code !== 1) {
+    if (j.msg === '未登录') handleSessionExpired();
+    throw new Error(j.msg);
+  }
+  return j.data;
+}
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (j.code !== 1) {
+    if (j.msg === '未登录') handleSessionExpired();
+    throw new Error(j.msg);
+  }
+  return j.data;
+}
+function v(id) { return document.getElementById(id).value.trim(); }
+function num(id) { const x = document.getElementById(id).value; return x === '' ? null : Number(x); }
+function msg(id, text, isErr) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = isErr ? 'err' : 'msg';
+  if (text) setTimeout(() => el.textContent = '', 4000);
+}
+function fmtDate(v) {
+  if (!v) return '';
+  if (typeof v === 'number') {
+    const d = new Date(v);
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  return String(v).replace('T', ' ');
+}
+
+let catMap = {};   // 分类id -> 分类名
+
+// ========== 登录门禁 ==========
+let currentUser = null;   // 当前登录用户
+let token = null;         // 登录 token
+
+async function doLogin() {
+  const username = v('loginUser');
+  const password = v('loginPass');
+  if (!username || !password) return alert('请输入用户名和密码');
+  try {
+    const data = await post('/user/login', { username: username, password: password });
+    currentUser = data.user;
+    token = data.token;   // 存 token, 以后每个请求都带
+    // 登录成功: 隐藏登录框, 显示主内容
+    document.getElementById('loginCard').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('welcomeText').textContent =
+      '欢迎，' + (data.user.realName || data.user.username) + '（角色ID: ' + data.user.roleId + '）';
+    await enterApp();   // 登录后才加载数据
+  } catch (e) {
+    msg('loginMsg', '登录失败: ' + e.message, true);
+  }
+}
+function logout() {
+  // 通知后端删 token(失败也无所谓)
+  try { fetch('/user/logout', { method: 'POST', headers: authHeaders() }); } catch (e) {}
+  currentUser = null;
+  token = null;
+  document.getElementById('loginCard').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginPass').value = '';
+  msg('loginMsg', '');
+}
+async function enterApp() {
+  try {
+    await loadCategories();
+    await loadSuppliers();
+    await loadProducts();
+    await loadProductOptions();
+    await loadRecords();
+    await loadReports();
+    await loadLogs();
+  } catch (e) {
+    alert('数据加载出错: ' + e.message);
+  }
+}
+
+// ========== 分类 / 供应商 ==========
+async function loadCategories() {
+  const data = await get('/category/list');
+  catMap = {};
+  data.forEach(c => catMap[c.id] = c.name);
+  document.getElementById('pCategory').innerHTML =
+    data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+async function loadSuppliers() {
+  const data = await get('/supplier/list');
+  document.getElementById('poSupplier').innerHTML =
+    data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+async function addSupplier() {
+  const name = v('poNewSupplier');
+  if (!name) return alert('请输入供应商名称');
+  try {
+    await post('/supplier/add', { name: name });
+    alert('供应商添加成功');
+    await loadSuppliers();
+  } catch (e) { alert('添加失败: ' + e.message); }
+}
+
+// ========== 商品 ==========
+async function loadProducts() {
+  try {
+    const name = v('searchName');
+    const data = await get('/product/list?name=' + encodeURIComponent(name));
+    const tb = document.getElementById('productBody');
+    tb.innerHTML = data.map(p => {
+      const low = p.stock < p.warningThreshold;
+      return `<tr>
+        <td>${p.id}</td><td>${p.name}</td><td>${p.barcode || ''}</td>
+        <td>${catMap[p.categoryId] || p.categoryId || '-'}</td>
+        <td>${p.spec || ''}</td><td>${p.unit || ''}</td>
+        <td>${p.purchasePrice}</td><td>${p.salePrice}</td>
+        <td class="${low ? 'warn' : ''}">${p.stock}</td>
+        <td>${p.warningThreshold}</td>
+        <td>${p.status === 1 ? '在售' : '下架'}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="11" style="text-align:center">暂无商品</td></tr>';
+  } catch (e) { msg('productMsg', '加载失败: ' + e.message, true); }
+}
+async function loadProductOptions() {
+  const data = await get('/product/list');
+  const po = document.getElementById('poProduct');
+  const so = document.getElementById('soProduct');
+  const html = data.map(p =>
+    `<option value="${p.id}" data-purchase="${p.purchasePrice}" data-sale="${p.salePrice}">${p.name} (库存${p.stock})</option>`
+  ).join('');
+  po.innerHTML = html;
+  so.innerHTML = html;
+  syncPrice();
+}
+function syncPrice() {
+  const po = document.getElementById('poProduct').selectedOptions[0];
+  const so = document.getElementById('soProduct').selectedOptions[0];
+  document.getElementById('poPrice').value = po ? po.dataset.purchase : '';
+  document.getElementById('soPrice').value = so ? so.dataset.sale : '';
+}
+async function addProduct() {
+  const body = {
+    name: v('pName'), barcode: v('pBarcode'), categoryId: num('pCategory'),
+    spec: v('pSpec'), unit: v('pUnit'),
+    purchasePrice: num('pPurchase'), salePrice: num('pSale'),
+    warningThreshold: num('pWarn')
+  };
+  if (!body.name) return alert('请填写商品名称');
+  try {
+    await post('/product/add', body);
+    msg('productMsg', '新增成功');
+    loadProducts(); loadProductOptions();
+  } catch (e) { msg('productMsg', '新增失败: ' + e.message, true); }
+}
+
+// ========== 采购 / 销售 ==========
+async function doPurchase() {
+  const body = {
+    supplierId: num('poSupplier'),
+    details: [{ productId: num('poProduct'), quantity: num('poQty'), price: num('poPrice') }]
+  };
+  if (!body.supplierId) return alert('请先添加/选择供应商');
+  if (!body.details[0].productId) return alert('请选择商品');
+  try {
+    await post('/purchaseOrder/create', body);
+    msg('purchaseMsg', '采购入库成功! 库存已增加');
+    loadProducts(); loadProductOptions(); loadRecords();
+  } catch (e) { msg('purchaseMsg', '采购失败: ' + e.message, true); }
+}
+async function doSale() {
+  const body = {
+    customerName: v('soCustomer'),
+    details: [{ productId: num('soProduct'), quantity: num('soQty'), price: num('soPrice') }]
+  };
+  if (!body.details[0].productId) return alert('请选择商品');
+  try {
+    await post('/saleOrder/sale', body);
+    msg('saleMsg', '销售出库成功! 库存已减少');
+    loadProducts(); loadProductOptions(); loadRecords();
+  } catch (e) { msg('saleMsg', '销售失败: ' + e.message, true); }
+}
+
+// ========== 流水 ==========
+async function loadRecords() {
+  try {
+    const data = await get('/stockRecord/list');
+    document.getElementById('recordBody').innerHTML = data.map(r => `<tr>
+      <td>${fmtDate(r.createTime)}</td>
+      <td>${r.productName || r.productId}</td>
+      <td>${r.type === 1 ? '入库' : '出库'}</td>
+      <td>${r.quantity}</td>
+      <td>${r.afterStock}</td>
+      <td>${r.bizType}</td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">暂无流水</td></tr>';
+  } catch (e) { /* 忽略 */ }
+}
+
+// ========== 报表 ==========
+async function loadReports() {
+  try {
+    const sale = await get('/saleOrder/voByDay');
+    document.getElementById('reportBody').innerHTML = sale.map(r => `<tr>
+      <td>${r.day}</td><td>${r.orderCount}</td><td>${r.totalAmount}</td>
+    </tr>`).join('') || '<tr><td colspan="3" style="text-align:center">暂无销售数据</td></tr>';
+    const p = await get('/saleOrderDetail/profit');
+    document.getElementById('profitInfo').innerHTML =
+      `销售额 <b>${p.revenue}</b> | 成本 <b>${p.cost}</b> | 毛利 <b style="color:#27ae60">${p.profit}</b>`;
+  } catch (e) { /* 忽略 */ }
+}
+
+// ========== 操作日志 ==========
+async function loadLogs() {
+  try {
+    const data = await get('/operationLog/list');
+    document.getElementById('logBody').innerHTML = data.map(o => `<tr>
+      <td>${fmtDate(o.createTime)}</td>
+      <td>${o.username || '-'}</td>
+      <td>${o.module || ''}</td>
+      <td>${o.action || ''}</td>
+      <td>${o.ip || '-'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">暂无日志</td></tr>';
+  } catch (e) { /* 忽略 */ }
+}
+
+// 选择商品自动带出价格
+document.getElementById('poProduct').addEventListener('change', syncPrice);
+document.getElementById('soProduct').addEventListener('change', syncPrice);
+
+// ========== 初始化 ==========
+// 页面默认停在登录界面; 登录成功后在 enterApp() 里才加载数据
+</script>
+</body>
+</html>
