@@ -79,7 +79,17 @@ public class InventoryTools {
     }
 
     // 通用只读SQL工具(Text-to-SQL): 让AI自己写SQL查任意统计, 带4把安全锁
-    @Tool(description = "执行只读SQL查询(SELECT)获取业务数据并返回结果行。用于任意统计/聚合/排行/对比/多条件查询，例如'哪个商品毛利最高''按分类汇总库存''总采购额''销售Top5'。支持联表JOIN、分组GROUP BY、排序ORDER BY、LIMIT。凡是需要统计多行或整表数据的查询，必须用这个工具，不要用查单个商品的工具。")
+    @Tool(description = "执行只读SQL查询(SELECT)获取业务数据并返回结果行。用于任意统计/聚合/排行/对比/多条件查询，例如'哪个商品毛利最高''按分类汇总库存''总采购额''销售Top5'。支持联表JOIN、分组GROUP BY、排序ORDER BY、LIMIT。凡是需要统计多行或整表数据的查询，必须用这个工具，不要用查单个商品的工具。\n" +
+            "数据库表结构(直接按这些表名/字段写SQL, 不要反复试错猜测):\n" +
+            "- product(商品): id, name, barcode, category_id, spec, unit, purchase_price(进价), sale_price(售价), stock(库存), warning_threshold(预警线), status(1在售0下架)\n" +
+            "- category(分类): id, name\n" +
+            "- supplier(供应商): id, name, contact, phone, address, remark\n" +
+            "- purchase_order(采购单): id, order_no, supplier_id, total_amount, status(0待入库1已入库2已取消), operator_id, create_time\n" +
+            "- purchase_order_detail(采购明细): id, order_id, product_id, quantity, price, amount\n" +
+            "- sale_order(销售单): id, order_no, customer_name(客户名), total_amount, status(0待出库1已出库2已取消), create_time\n" +
+            "- sale_order_detail(销售明细): id, order_id, product_id, quantity, price, amount\n" +
+            "- stock_record(出入库流水): id, product_id, type(1入库0出库), quantity, after_stock, biz_type(采购入库/销售出库), order_no, create_time\n" +
+            "- operation_log(操作日志): id, user_id, username, module, action, ip, create_time")
     public String executeSql(String sql) {
         ToolNotifier.notify("executeSql", sql);
         if (sql == null || sql.trim().isEmpty()) return "SQL不能为空";
