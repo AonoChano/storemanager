@@ -1876,6 +1876,7 @@ async function sendChat() {
 
 // 发送按钮: 上箭头发送 / 停止方块
 const chatSendBtn = document.getElementById('chatSendBtn');
+chatSendBtn.innerHTML = SEND_ICON;  // 初始图标
 let chatAbort = null;
 
 function setSendState(streaming) {
