@@ -2244,6 +2244,10 @@ function updateChatClearBtn() {
 // 清空对话(回到空状态)
 function clearChat() {
   chatHistory.length = 0;
+  // 若上一轮流式还在进行(如异常中断), 中止并复位发送按钮, 避免新对话卡在停止图标
+  if (chatAbort) chatAbort.abort();
+  chatAbort = null;
+  setSendState(false);
   document.getElementById('chatBody').innerHTML = '';
   renderEmptyState();
   updateChatClearBtn();

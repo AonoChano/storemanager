@@ -93,12 +93,13 @@ public class ChatService {
         }
 
         // ④ 流式调用: 逐块取出 思考链(DeepSeekAssistantMessage.reasoningContent) + 正文 + 工具调用名
-        // 工具调用事件: Spring AI 流式工具调用在框架内部被消费, 工具实际执行时经 ToolNotifier 注入
-        reactor.core.publisher.Sinks.Many<ChatChunk> toolSink =
+        // 工具调用事件: Spring AI 流式工具调用在框架内部被消费, 工具实际执行时经 ToolNotifier 注入。
+        // 手动桥接(不用 Flux.merge): merge 会等所有源完成, 而工具事件源没有完成信号 → [DONE] 永远发不出
+        reactor.core.publisher.Sinks.Many<ChatChunk> bridge =
                 reactor.core.publisher.Sinks.many().unicast().onBackpressureBuffer();
-        ToolNotifier.setListener(name -> toolSink.tryEmitNext(new ChatChunk(null, null, name)));
+        ToolNotifier.setListener(name -> bridge.tryEmitNext(new ChatChunk(null, null, name)));
 
-        Flux<ChatChunk> modelFlux = chatClient.prompt()
+        chatClient.prompt()
                 .system(sys)
                 .messages(messages)
                 .stream()
@@ -117,11 +118,14 @@ public class ChatService {
                         toolName = out.getToolCalls().get(0).name();
                     }
                     return new ChatChunk(reasoning, out != null ? out.getText() : null, toolName);
-                });
+                })
+                .subscribe(
+                        chunk -> bridge.tryEmitNext(chunk),
+                        err -> bridge.tryEmitError(err),
+                        () -> bridge.tryEmitComplete()   // 模型流完成 → 桥也完成 → [DONE] 正常发出
+                );
 
-        // 合并: 工具事件与模型 chunk 同线程产生(工具在模型流内同步执行), 顺序天然正确
-        return reactor.core.publisher.Flux.merge(toolSink.asFlux(), modelFlux)
-                .doFinally(sig -> ToolNotifier.clear());
+        return bridge.asFlux().doFinally(sig -> ToolNotifier.clear());
     }
 
     // 判断问题是否含"明显跑题"关键词
