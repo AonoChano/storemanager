@@ -513,18 +513,13 @@
             line-height: 1.5;
         }
 
-        .hint-text {
+        /* 左下角音效开关(原引导文案已移除) */
+        .sound-toggle {
             position: absolute;
             bottom: 64px;
             left: 28px;
             display: flex;
             align-items: center;
-            gap: 14px;
-            font-family: 'Space Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--dim);
-            pointer-events: none;
-            opacity: 0.6;
             z-index: 10;
         }
 
@@ -634,7 +629,7 @@
                 background-color: var(--surface);
             }
             .page-footer { gap: 1rem; flex-direction: column; padding: 0.5rem 1rem; }
-            .hint-text { display: none; }
+            .sound-toggle { display: none; }
         }
 
         /* 矮窗口: 面板内容多, 改为顶部对齐可滚动, 避免挤压裁切 */
@@ -669,7 +664,7 @@
         </svg>
     </button>
 
-    <div class="hint-text">
+    <div class="sound-toggle">
         <button class="btn-sound active" id="soundBtn" type="button" title="音效: 开" aria-label="音效开关">
             <svg class="icon-on" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M2 6v4h2.5L8 13V3L4.5 6H2z"/>
@@ -681,7 +676,6 @@
                 <path d="M10.5 5.5l3 5M13.5 5.5l-3 5"/>
             </svg>
         </button>
-        <span>✎ 在左侧手绘文字上移动鼠标触发物理挤压与墨水抖动效果</span>
     </div>
 
     <!-- 兼具背景测绘图与手绘弹力字体的画布(全屏铺底) -->
