@@ -14,9 +14,9 @@ import java.util.Map;
 @Service
 public class ChatService {
 
-    // 流式返回的一块: reasoning=思考链增量(可空), content=正文增量(可空)
-    // 思考链与正文在流中交替出现: 思考阶段 content 为空, 思考完 reasoning 为空
-    public record ChatChunk(String reasoning, String content) {}
+    // 流式返回的一块: reasoning=思考链增量(可空), content=正文增量(可空), toolName=工具调用名(可空)
+    // 思考链/正文/工具调用在流中交替出现: 工具调用 chunk 的 reasoning/content 均为空
+    public record ChatChunk(String reasoning, String content, String toolName) {}
 
     // 明显跑题的关键词(黑名单, 第①层硬拦截): 命中直接拒绝, 不调AI
     // 换成黑名单的好处: 正常的进销存问题不管怎么问都能过, 只挡明显不相关的
@@ -68,7 +68,7 @@ public class ChatService {
     public Flux<ChatChunk> streamChat(String message, List<Map<String, String>> history, String userName) {
         // ① 硬拦截(不调AI)
         if (isOffTopic(message)) {
-            return Flux.just(new ChatChunk(null, "我只能回答进销存相关的问题，比如采购、销售、库存、报表等。"));
+            return Flux.just(new ChatChunk(null, "我只能回答进销存相关的问题，比如采购、销售、库存、报表等。", null));
         }
 
         // ② 组装多轮历史(截断到最后 20 条, 控制 token)
@@ -92,22 +92,36 @@ public class ChatService {
             sys = SYSTEM_PROMPT + "\n当前登录用户是" + userName + "，回答时可以用'您'称呼。";
         }
 
-        // ④ 流式调用: 逐块取出 思考链(DeepSeekAssistantMessage.reasoningContent) + 正文
-        return chatClient.prompt()
+        // ④ 流式调用: 逐块取出 思考链(DeepSeekAssistantMessage.reasoningContent) + 正文 + 工具调用名
+        // 工具调用事件: Spring AI 流式工具调用在框架内部被消费, 工具实际执行时经 ToolNotifier 注入
+        reactor.core.publisher.Sinks.Many<ChatChunk> toolSink =
+                reactor.core.publisher.Sinks.many().unicast().onBackpressureBuffer();
+        ToolNotifier.setListener(name -> toolSink.tryEmitNext(new ChatChunk(null, null, name)));
+
+        Flux<ChatChunk> modelFlux = chatClient.prompt()
                 .system(sys)
                 .messages(messages)
                 .stream()
                 .chatResponse()
                 .map(resp -> {
                     String reasoning = null;
+                    String toolName = null;
                     org.springframework.ai.chat.messages.AssistantMessage out =
                             resp.getResult() != null ? resp.getResult().getOutput() : null;
                     // DeepSeek 模块把思考链存在自定义消息类里(非 metadata)
                     if (out instanceof org.springframework.ai.deepseek.DeepSeekAssistantMessage dsm) {
                         reasoning = dsm.getReasoningContent();
                     }
-                    return new ChatChunk(reasoning, out != null ? out.getText() : null);
+                    // 工具调用 chunk: 取首个工具名(流式 arguments 是增量, 前端按名去重展示)
+                    if (out != null && out.getToolCalls() != null && !out.getToolCalls().isEmpty()) {
+                        toolName = out.getToolCalls().get(0).name();
+                    }
+                    return new ChatChunk(reasoning, out != null ? out.getText() : null, toolName);
                 });
+
+        // 合并: 工具事件与模型 chunk 同线程产生(工具在模型流内同步执行), 顺序天然正确
+        return reactor.core.publisher.Flux.merge(toolSink.asFlux(), modelFlux)
+                .doFinally(sig -> ToolNotifier.clear());
     }
 
     // 判断问题是否含"明显跑题"关键词

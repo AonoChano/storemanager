@@ -461,6 +461,24 @@
   .chat-thinking .ping { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: chatPing 1.2s ease-in-out infinite; }
   @keyframes chatPing { 0%,100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
 
+  /* 思考链滚筒(思考进行中): 单行遮罩窗口, 行文本从下往上滚过 */
+  .chat-think-live {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 12px; margin: 0 0 10px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface-2); color: var(--dim);
+    font-size: 12.5px; overflow: hidden;
+  }
+  .chat-think-live > svg { flex-shrink: 0; color: var(--faint); }
+  .think-live-text {
+    flex: 1; height: 100%; overflow: hidden;
+    scroll-behavior: smooth;  /* 滚筒滚动动画 */
+  }
+  .think-row {
+    line-height: 36px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+
   /* 思考链折叠块(默认收起, 点击展开) */
   .chat-think {
     margin: 0 0 10px; border: 1px solid var(--border); border-radius: 10px;
@@ -472,7 +490,7 @@
     font-size: 12px; letter-spacing: .06em; transition: color .15s;
   }
   .chat-think summary::-webkit-details-marker { display: none; }
-  .chat-think summary::before { content: '▸'; font-size: 11px; transition: transform .18s ease; }
+  .chat-think summary::before { content: '▸'; font-size: 15px; line-height: 1; transition: transform .18s ease; }
   .chat-think[open] summary::before { transform: rotate(90deg); }
   .chat-think summary:hover { color: var(--text); }
   .chat-think summary svg { flex-shrink: 0; }
@@ -481,6 +499,22 @@
     white-space: pre-wrap; word-break: break-word; line-height: 1.6;
     border-top: 1px dashed var(--border);
   }
+
+  /* 工具调用行(银灰独立一行, 参考设计稿"搜索结果"行的形态) */
+  .chat-tool-wrap { margin: 0 0 10px; display: flex; flex-direction: column; gap: 4px; }
+  .chat-tool {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--dim);
+  }
+  .chat-tool svg { color: var(--faint); flex-shrink: 0; }
+  .chat-tool .tool-name {
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px; text-decoration-thickness: 1px;
+  }
+
+  /* Markdown 水平分割线 */
+  .chat-msg.bot hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
   /* Markdown 内容 */
   .chat-msg.bot pre {
@@ -1795,7 +1829,8 @@ const REFRESH_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none
 const STAR_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" stroke-linejoin="round"/></svg>';
 const SEND_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
 const STOP_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12v12h-12z"/></svg>';
-const THINK_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4.5 4.5 0 0 1 2.8 8.1c-.8.6-1.3 1.4-1.3 2.4H10.5c0-1.3.6-2.3 1.5-3A4.5 4.5 0 0 1 12 2z"/><path d="M10.5 15h3M11 18h2"/></svg>';
+const THINK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.2 2.2h4.8c.1-.8.5-1.6 1.2-2.2A6 6 0 0 0 12 3z"/><path d="M12 6v2"/><path d="M9.7 8.5l-1-1M14.3 8.5l1-1"/></svg>';
+const TOOL_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v7c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 12v7c0 1.7 3.1 3 7 3s7-1.3 7-3v-7"/></svg>';
 
 // 轻量 Markdown 渲染(先安全转义再处理常用语法)
 function renderMarkdown(text) {
@@ -1819,6 +1854,7 @@ function renderMarkdown(text) {
   html = html.replace(/^### (.*)$/gm, '<h4>$1</h4>');
   html = html.replace(/^## (.*)$/gm, '<h3>$1</h3>');
   html = html.replace(/^# (.*)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^\s*---\s*$/gm, '<hr>');  // 水平分割线
   html = html.replace(/^\s*[-*] (.*)$/gm, '<li>$1</li>');
   html = html.replace(/^\s*\d+[.、] (.*)$/gm, '<li>$1</li>');
   html = html.replace(/(?:<li>.*<\/li>\n?)+/g, m => '<ul>' + m.trim() + '</ul>');
@@ -1923,11 +1959,23 @@ function addCodeCopyButtons(root) {
 }
 
 // 完成一条 AI 消息: 思考链折叠块 + 内容 + 操作栏(赞/踩/复制/重新生成)
+// 若流式阶段已定格思考块/工具行/正文容器(.chat-content), 复用而不重建(保留用户折叠状态)
 function finalizeBotMsg(el, fullText, opts) {
   opts = opts || {};
-  el.classList.remove('chat-thinking');
+  el.classList.remove('chat-thinking', 'chat-think-live');
   el.className = 'chat-msg bot';
-  el.innerHTML = thinkBlock(opts.think) + renderMarkdown(fullText);
+  const contentEl = el.querySelector('.chat-content');
+  if (contentEl) {
+    contentEl.innerHTML = renderMarkdown(fullText);
+  } else {
+    // 非流式路径(错误消息等): 整块渲染
+    el.innerHTML = '';
+    if (opts.think) el.appendChild(createThinkDetails(opts.think));
+    const c = document.createElement('div');
+    c.className = 'chat-content';
+    c.innerHTML = renderMarkdown(fullText);
+    el.appendChild(c);
+  }
   addCodeCopyButtons(el);
 
   const actions = document.createElement('div');
@@ -2004,7 +2052,8 @@ function finalizeBotMsg(el, fullText, opts) {
   el.appendChild(actions);
 }
 
-// 发送消息: 流式 SSE 逐字渲染(思考链 [THINK] 折叠块 + 正文打字机)
+// 发送消息: 流式 SSE 逐字渲染
+// 阶段: ① "正在思考..." → ② 思考链到达: 同一行变单行滚动区(最新文字可见) → ③ 正文到达: 定格为折叠块 → 正文打字机
 async function sendChat() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
@@ -2015,6 +2064,12 @@ async function sendChat() {
   const thinkingEl = appendMsg('', 'bot', { typing: true });
   let full = '';
   let thinkFull = '';
+  let thinkLive = null;    // 思考滚筒(首次收到 [THINK] 时创建): 单行遮罩窗口, 行从下往上滚过
+  let thinkPartial = '';   // 滚筒里未换行的进行中行(增量跨 chunk 拼接用)
+  let thinkFinalized = false;  // 滚筒已定格为折叠块(工具调用/正文出现后, 后续思考只更新折叠内容)
+  let toolWrapEl = null;   // 工具调用行容器(首次收到 [TOOL] 时创建)
+  const toolNames = [];    // 已展示的工具名(去重)
+  let contentEl = null;    // 正文打字机容器(首次收到正文时创建, 与思考块分离避免重建)
   const body = document.getElementById('chatBody');
   chatAbort = new AbortController();
   setSendState(true);
@@ -2046,12 +2101,71 @@ async function sendChat() {
         const data = dataLines.join('\n');
         if (data === '[DONE]') { buffer = ''; break; }
         if (data.startsWith('[ERROR]')) throw new Error(data.slice(7));
-        if (data.startsWith('[THINK]')) { thinkFull += data.slice(7); continue; }
+        if (data.startsWith('[THINK]')) {
+          thinkFull += data.slice(7);
+          // 滚筒已定格(工具调用/正文之后): 只更新折叠块内容, 保留展开状态
+          if (thinkFinalized) {
+            const tb = thinkingEl.querySelector('.chat-think-body');
+            if (tb) tb.textContent = thinkFull;
+            continue;
+          }
+          // 思考链首字到达: "正在思考..."原地变成滚筒(单行遮罩窗口)
+          if (!thinkLive) {
+            thinkingEl.classList.remove('chat-thinking');
+            thinkingEl.className = 'chat-think-live';
+            thinkingEl.innerHTML = THINK_ICON + '<div class="think-live-text"></div>';
+            thinkLive = thinkingEl.querySelector('.think-live-text');
+          }
+          // 增量按换行分割成行, 追加到滚筒底部
+          thinkPartial += data.slice(7);
+          const parts = thinkPartial.split('\n');
+          thinkPartial = parts.pop();  // 最后一段可能未换行, 保留为进行中的行
+          parts.forEach(line => {
+            const row = document.createElement('div');
+            row.className = 'think-row';
+            row.textContent = line;
+            thinkLive.appendChild(row);
+          });
+          // 滚筒滚到底: 新行从遮罩窗口底部滚入, 旧行向上滚出(平滑动画)
+          thinkLive.scrollTop = thinkLive.scrollHeight;
+          body.scrollTop = body.scrollHeight;
+          continue;
+        }
+        if (data.startsWith('[TOOL]')) {
+          const tname = data.slice(6);
+          if (toolNames.includes(tname)) continue;
+          // 工具调用出现: 滚筒定格为折叠块, 建工具行容器(正文前)
+          if (!toolWrapEl) {
+            thinkingEl.classList.remove('chat-thinking', 'chat-think-live');
+            thinkingEl.className = 'chat-msg bot';
+            thinkingEl.innerHTML = '';
+            thinkingEl.appendChild(createThinkDetails(thinkFull));
+            toolWrapEl = document.createElement('div');
+            toolWrapEl.className = 'chat-tool-wrap';
+            thinkingEl.appendChild(toolWrapEl);
+            thinkLive = null;
+            thinkFinalized = true;
+          }
+          toolNames.push(tname);
+          toolWrapEl.innerHTML = toolNames.map(t => toolRow(t)).join('');
+          body.scrollTop = body.scrollHeight;
+          continue;
+        }
+        // 正文首字到达: 定格思考/工具区, 正文开始打字机
+        if (!contentEl) {
+          thinkingEl.classList.remove('chat-thinking', 'chat-think-live');
+          thinkingEl.className = 'chat-msg bot';
+          if (!toolWrapEl) {
+            // 无工具调用: 折叠块(如有)直接放入
+            thinkingEl.innerHTML = '';
+            if (thinkFull) thinkingEl.appendChild(createThinkDetails(thinkFull));
+          }
+          contentEl = document.createElement('div');
+          contentEl.className = 'chat-content';
+          thinkingEl.appendChild(contentEl);
+        }
         full += data;
-        // 流式过程显示纯文本打字机(思考块 + 转义正文), 避免未闭合 markdown 闪烁
-        thinkingEl.classList.remove('chat-thinking');
-        thinkingEl.className = 'chat-msg bot';
-        thinkingEl.innerHTML = thinkBlock(thinkFull) + escHtml(full);
+        contentEl.textContent = full;  // 纯文本打字机, 避免未闭合 markdown 闪烁
         body.scrollTop = body.scrollHeight;
       }
     }
@@ -2081,11 +2195,18 @@ async function sendChat() {
   body.scrollTop = body.scrollHeight;
 }
 
-// 思考链折叠块 HTML(有内容才渲染, 默认收起, 点击展开)
-function thinkBlock(t) {
-  if (!t) return '';
-  return '<details class="chat-think"><summary>' + THINK_ICON + '<span>思考过程</span></summary>' +
-    '<div class="chat-think-body">' + escHtml(t) + '</div></details>';
+// 思考链折叠块 DOM(默认收起, 点击展开; 返回元素便于保留折叠状态)
+function createThinkDetails(t) {
+  const d = document.createElement('details');
+  d.className = 'chat-think';
+  d.innerHTML = '<summary>' + THINK_ICON + '<span>思考过程</span></summary><div class="chat-think-body"></div>';
+  d.querySelector('.chat-think-body').textContent = t || '';
+  return d;
+}
+
+// 工具调用行(银灰: 数据库图标 + 工具名下划线, 参考设计稿"搜索结果"行的独立一行效果)
+function toolRow(name) {
+  return '<div class="chat-tool">' + TOOL_ICON + '<span>调用工具</span><span class="tool-name">' + escHtml(name) + '</span></div>';
 }
 
 // HTML 转义(打字机/思考链用, 避免渲染成标签)

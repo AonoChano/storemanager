@@ -51,9 +51,13 @@ public class ChatController {
 
         chatService.streamChat(message, history, userName).subscribe(
                 chunk -> {
-                    // 思考链增量: [THINK] 前缀, 前端渲染折叠的思考过程块
+                    // 思考链增量: [THINK] 前缀, 前端渲染滚筒/折叠的思考过程块
                     if (chunk.reasoning() != null && !chunk.reasoning().isEmpty()) {
                         sendSafe(emitter, "[THINK]" + chunk.reasoning());
+                    }
+                    // 工具调用: [TOOL] 前缀, 前端渲染银灰工具行
+                    if (chunk.toolName() != null && !chunk.toolName().isBlank()) {
+                        sendSafe(emitter, "[TOOL]" + chunk.toolName());
                     }
                     // 正文增量: 无前缀, 前端打字机渲染
                     if (chunk.content() != null && !chunk.content().isEmpty()) {
