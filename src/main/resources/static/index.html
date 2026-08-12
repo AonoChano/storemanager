@@ -178,6 +178,46 @@
   .field-inline { display: flex; gap: 8px; }
   .field-inline input { flex: 1; }
 
+  /* ===== 商品选择弹窗 ===== */
+  .modal {
+    position: fixed; inset: 0; z-index: 120;
+    background: rgba(0, 0, 0, .45);
+    display: grid; place-items: center;
+    padding: 20px;
+  }
+  .modal-box {
+    width: min(520px, 94vw);
+    max-height: 76vh;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .4);
+    animation: modalIn .22s cubic-bezier(.22, .9, .3, 1);
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+  .modal-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-head input { flex: 1; width: auto; font-size: 14px; padding: 9px 12px; }
+  .picker-list { flex: 1; overflow-y: auto; padding: 6px; }
+  .picker-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    cursor: pointer; transition: background .12s;
+  }
+  .picker-row:hover { background: var(--row-hover); }
+  .picker-row .p-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker-row .p-name b { color: var(--accent); }
+  .picker-row .p-meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .picker-row .p-meta em { font-style: normal; color: var(--ok); }
+  .picker-row .p-meta b { color: var(--warn); }
+  .picker-empty { text-align: center; color: var(--faint); padding: 30px 0; font-size: 13px; }
+  .picker-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); }
+
   /* ===== 采购/销售单据明细 ===== */
   .entry-table { min-width: 520px; }
   .entry-table input { width: 100%; min-width: 0; }
@@ -703,6 +743,18 @@
 
 <div id="toastWrap"></div>
 
+<!-- 商品选择弹窗(单据明细行选商品用) -->
+<div class="modal" id="productPicker" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <input id="pickerSearch" placeholder="搜索商品名称 / 条码，输入实时过滤..." autocomplete="off">
+      <button class="chat-close" onclick="closeProductPicker()" aria-label="关闭"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="picker-list" id="pickerList"></div>
+    <div class="picker-foot"><span id="pickerCount"></span></div>
+  </div>
+</div>
+
 <!-- 客服侧栏(左滑入展开/收起) -->
 <div id="chatPanel">
   <div class="chat-head"><span>智能客服</span><div style="display:flex;gap:2px"><button class="chat-clear" id="chatClearBtn" onclick="clearChat()" title="新对话" aria-label="新对话" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></button><button class="chat-close" onclick="toggleChat()" aria-label="收起"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button></div></div>
@@ -983,6 +1035,81 @@ async function batchAdd() {
 }
 
 // ========== 采购 / 销售 ==========
+// ========== 商品选择弹窗(顶部搜索 + 实时过滤列表) ==========
+let pickerTarget = null;  // {prefix, tr}
+
+function openProductPicker(prefix, tr) {
+  if (tr.querySelector('.entry-pid').value) return;  // 该行已选商品
+  pickerTarget = { prefix, tr };
+  document.getElementById('pickerSearch').value = '';
+  document.getElementById('productPicker').hidden = false;
+  renderPickerList('');
+  document.getElementById('pickerSearch').focus();
+}
+
+function closeProductPicker() {
+  document.getElementById('productPicker').hidden = true;
+  pickerTarget = null;
+}
+
+function renderPickerList(filter) {
+  const kw = (filter || '').trim().toLowerCase();
+  const kind = pickerTarget && pickerTarget.prefix === 'po' ? 'purchase' : 'sale';
+  const list = document.getElementById('pickerList');
+  const items = products.filter(p => {
+    if (!kw) return true;
+    return (p.name || '').toLowerCase().includes(kw) || (p.barcode || '').includes(kw);
+  });
+  if (!items.length) {
+    list.innerHTML = '<div class="picker-empty">没有匹配的商品</div>';
+    document.getElementById('pickerCount').textContent = '0 个商品';
+    return;
+  }
+  list.innerHTML = items.map(p => {
+    const hl = kw ? p.name.replace(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<b>$1</b>') : p.name;
+    const price = kind === 'purchase' ? p.purchasePrice : p.salePrice;
+    return `<div class="picker-row" onclick="pickFromList(${p.id})">
+      <span class="p-name">${hl}</span>
+      <span class="p-meta">${p.barcode || '无条码'} · 库存<em>${p.stock}</em> · ${kind === 'purchase' ? '进价' : '售价'}¥<b>${price ?? '-'}</b></span>
+    </div>`;
+  }).join('');
+  document.getElementById('pickerCount').textContent = items.length + ' 个商品';
+}
+
+function pickFromList(pid) {
+  const p = products.find(x => x.id === pid);
+  if (!p || !pickerTarget) return;
+  const { prefix, tr } = pickerTarget;
+  fillEntryRow(tr, p, prefix);
+  addEntryRow(prefix);   // 选中后自动开下一行
+  closeProductPicker();
+  const rows = document.querySelectorAll('#' + prefix + 'DetailBody .entry-row');
+  if (rows.length) rows[rows.length - 1].querySelector('.entry-search').focus();
+}
+
+// 弹窗输入实时过滤 + Enter 选第一个 + Esc 关闭
+document.getElementById('pickerSearch').addEventListener('input', e => renderPickerList(e.target.value));
+document.getElementById('pickerSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const first = document.querySelector('#pickerList .picker-row');
+    if (first) { const pid = Number(first.getAttribute('onclick').match(/\d+/)[0]); pickFromList(pid); }
+  } else if (e.key === 'Escape') closeProductPicker();
+});
+document.getElementById('productPicker').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeProductPicker();  // 点遮罩关闭
+});
+
+// 商品页搜索: 输入即过滤(本地 products, 无需点按钮)
+document.getElementById('searchName').addEventListener('input', e => {
+  const kw = e.target.value.trim().toLowerCase();
+  const rows = document.querySelectorAll('#productBody tr');
+  rows.forEach(tr => {
+    const text = Array.from(tr.cells).map(c => c.textContent).join(' ').toLowerCase();
+    tr.style.display = (!kw || text.includes(kw)) ? '' : 'none';
+  });
+});
+
 // ========== 采购/销售单据(多商品明细 + 扫码流水线) ==========
 function addEntryRow(prefix) {
   const body = document.getElementById(prefix + 'DetailBody');
@@ -992,6 +1119,7 @@ function addEntryRow(prefix) {
   tr.innerHTML = `
     <td class="entry-sel">
       <input class="entry-search" placeholder="扫码 / 条码 / 名称" autocomplete="off">
+      <button class="btn ghost picker-btn" title="从列表选择">···</button>
       <input type="hidden" class="entry-pid">
     </td>
     <td><input class="entry-qty" type="number" min="1" value="1"></td>
@@ -1013,6 +1141,7 @@ function addEntryRow(prefix) {
     });
   });
   tr.querySelector('.entry-del').addEventListener('click', () => { tr.remove(); updateEntryTotals(prefix); });
+  tr.querySelector('.picker-btn').addEventListener('click', () => openProductPicker(prefix, tr));
   body.appendChild(tr);
   search.focus();
 }
@@ -1036,7 +1165,14 @@ function onSearchKeydown(e, prefix, tr) {
     toast('未找到商品: ' + input.value, 'err');
     return;
   }
+  fillEntryRow(tr, p, prefix);
+  addEntryRow(prefix);  // 扫码流水线: 自动开下一行
+}
+
+// 填充明细行(扫码/搜索/弹窗选择共用)
+function fillEntryRow(tr, p, prefix) {
   const kind = prefix === 'po' ? 'purchase' : 'sale';
+  const input = tr.querySelector('.entry-search');
   input.value = p.name + ' (' + (p.barcode || '无条码') + ')';
   input.classList.add('matched');
   input.disabled = true;
@@ -1044,7 +1180,6 @@ function onSearchKeydown(e, prefix, tr) {
   tr.querySelector('.entry-price').value = kind === 'purchase' ? p.purchasePrice : p.salePrice;
   tr.querySelector('.entry-qty').focus();
   updateEntryRow(tr, prefix);
-  addEntryRow(prefix);  // 扫码流水线: 自动开下一行
 }
 
 function updateEntryRow(tr, prefix) {
