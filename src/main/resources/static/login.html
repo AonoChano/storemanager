@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 · 进销存管理系统</title>
-    <!-- 引入 Google 手绘与古典字体 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Cabin+Sketch:wght@700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
+    <!-- 字体已本地化(static/fonts/), 不依赖 Google Fonts 网络 -->
 
     <style>
+        /* ===== 本地字体(latin 子集, 离线可用) ===== */
+        @font-face { font-family: 'Architects Daughter'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/architects-daughter-400.woff2) format('woff2'); }
+        @font-face { font-family: 'Cabin Sketch'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/cabin-sketch-700.woff2) format('woff2'); }
+        @font-face { font-family: 'Playfair Display'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/playfair-display-400.woff2) format('woff2'); }
+        @font-face { font-family: 'Playfair Display'; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/playfair-display-600.woff2) format('woff2'); }
+        @font-face { font-family: 'Playfair Display'; font-style: italic; font-weight: 400; font-display: swap; src: url(fonts/playfair-display-400i.woff2) format('woff2'); }
+        @font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/space-mono-400.woff2) format('woff2'); }
+        @font-face { font-family: 'Space Mono'; font-style: italic; font-weight: 400; font-display: swap; src: url(fonts/space-mono-400i.woff2) format('woff2'); }
+
         :root {
             --paper-bg: #f4efd8;
             --paper-light: #fbf9ec;
@@ -38,7 +44,12 @@
                 radial-gradient(circle at 50% 50%, transparent 20%, rgba(139, 126, 102, 0.08) 100%),
                 repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
             font-family: 'Playfair Display', serif;
+            font-size: 16px;
             color: var(--ink-dark);
+            /* 小字号衬线体更清晰 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
 
         #desktop-container {
