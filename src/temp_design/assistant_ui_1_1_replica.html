@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能客服界面设计推荐聊天界面设计</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Google Fonts for crisp typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 这里字体建议改成项目里拉取了的本地路径而不要依赖于网络使用甚至是谷歌这种在国内不稳定的服务的。 -->
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'sans-serif'],
+            mono: ['Fira Code', 'Monaco', 'Consolas', 'monospace']
+          },
+          colors: {
+            ui: {
+              bg: '#0c0c0e',
+              card: '#0f0f12',
+              border: '#222227',
+              inputBorder: '#28282e',
+              bubble: '#1f1f24',
+              hover: '#26262c',
+              code: '#18181c',
+              subtle: '#8e8e98',
+              orange: '#e07a5f'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar styling matching native dark mode OS interface */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+    
+    /* Code block overflow scrollbar */
+    .code-scroll::-webkit-scrollbar {
+      height: 4px;
+    }
+    .code-scroll::-webkit-scrollbar-thumb {
+      background: #33333d;
+      border-radius: 4px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+
+<body class="bg-[#08080a] text-zinc-100 font-sans min-h-screen flex flex-col items-center justify-center p-2 sm:p-6 antialiased selection:bg-amber-500/20 selection:text-amber-200">
+  
+  <div id="root" class="w-full h-full flex flex-col items-center justify-center"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    // Toast Notification Component
+    const Toast = ({ message, visible }) => {
+      if (!visible) return null;
+      return (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-zinc-800 text-zinc-100 text-xs px-4 py-2 rounded-full border border-zinc-700 shadow-xl flex items-center gap-2 animate-bounce">
+          <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>{message}</span>
+        </div>
+      );
+    };
+	
+	// 这里只是Mock一下，具体到时候请接入我们的实际接口进行管理回复。
+	
+    function App() {
+      const initialMessages = [
+        {
+          id: 1,
+          sender: 'user',
+          text: '能接入第三方么？'
+        },
+        {
+          id: 2,
+          sender: 'assistant',
+          intro: '我来帮你查一下 Claude Code 如何接入第三方工具。',
+          searchQuery: '搜索结果 接入第三方工具集成',
+          searchResults: [
+            { title: 'Claude Code Model Context Protocol (MCP) Guide', source: 'docs.anthropic.com' },
+            { title: 'Official MCP Servers Repository', source: 'github.com/modelcontextprotocol' },
+            { title: 'Integrating custom tools with stdio/HTTP transport', source: 'modelcontextprotocol.io' }
+          ],
+          hasSearch: true,
+          contentBlocks: [
+            { type: 'paragraph', text: '可以。Claude Code 通过 ', highlight: 'MCP (Model Context Protocol)', textAfter: ' 接入第三方工具。' },
+            { type: 'paragraph', text: 'MCP 是一个开放标准，让 Claude 连接到外部服务，如 GitHub、Jira、Linear、Notion、数据库等。你可以：' },
+            { 
+              type: 'list', 
+              items: [
+                { id: '1', title: '1. 使用官方 MCP 服务器', desc: ' — 连接 GitHub、Postgres、Slack 等' },
+                { id: '2', title: '2. 配置本地或远程服务器', desc: ' — 通过 stdio、HTTP 或 SSE 连接' },
+                { id: '3', title: '3. 传递凭证', desc: ' — 通过环境变量或 HTTP 头进行身份验证' }
+              ] 
+            },
+            { type: 'paragraph', text: '例如，连接 GitHub 来列出问题：' },
+            { 
+              type: 'code', 
+              codeText: 'claude mcp add github npx -y @modelcontextprotocol/server-github'
+            },
+            { type: 'outro', text1: '然后在会话中使用 GitHub 工具。详见 ', linkText: 'MCP 文档', text2: '。' }
+          ]
+        }
+      ];
+
+      const [messages, setMessages] = useState(initialMessages);
+      const [inputText, setInputText] = useState('');
+      const [isThinking, setIsThinking] = useState(false);
+      const [showSearchSources, setShowSearchSources] = useState(false);
+      const [likedMessageId, setLikedMessageId] = useState(null);
+      const [dislikedMessageId, setDislikedMessageId] = useState(null);
+      const [copiedId, setCopiedId] = useState(null);
+      const [toastMsg, setToastMsg] = useState('');
+      const [showToast, setShowToast] = useState(false);
+      const [viewMode, setViewMode] = useState('panel');
+      const [isDragging, setIsDragging] = useState(false);
+
+      const chatContainerRef = useRef(null);
+      const fileInputRef = useRef(null);
+      const dragDepthRef = useRef(0);
+
+      const triggerToast = (msg) => {
+        setToastMsg(msg);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2200);
+      };
+
+      const handleResetToScreenshot = () => {
+        setMessages(initialMessages);
+        setShowSearchSources(false);
+        setLikedMessageId(null);
+        setDislikedMessageId(null);
+        setInputText('');
+        triggerToast('已还原至 1:1 截图状态');
+      };
+
+      // 复制: 被复制的按钮原地变绿勾一会, 其余按钮不受影响
+      const handleCopy = (text, id, toastMsg) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        setCopiedId(id);
+        triggerToast(toastMsg);
+        setTimeout(() => setCopiedId(null), 2000);
+      };
+
+      const handleSendMessage = (e) => {
+        if (e) e.preventDefault();
+        if (!inputText.trim() || isThinking) return;
+
+        const userMsgText = inputText.trim();
+        const newUserMsg = {
+          id: Date.now(),
+          sender: 'user',
+          text: userMsgText
+        };
+
+        setMessages((prev) => [...prev, newUserMsg]);
+        setInputText('');
+        setIsThinking(true);
+
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          }
+        }, 100);
+
+        setTimeout(() => {
+          const aiResponse = {
+            id: Date.now() + 1,
+            sender: 'assistant',
+            intro: `关于“${userMsgText}”，这里是进一步的解答：`,
+            hasSearch: false,
+            contentBlocks: [
+              { type: 'paragraph', text: '您可以随时配置更多自定义 MCP 工具或 REST API 接口来扩展功能。' },
+              { 
+                type: 'code', 
+                codeText: `claude mcp add custom-tool --env API_KEY=your_key` 
+              },
+              { type: 'outro', text1: '如有其它需求，请直接提出。', linkText: '', text2: '' }
+            ]
+          };
+          setMessages((prev) => [...prev, aiResponse]);
+          setIsThinking(false);
+
+          setTimeout(() => {
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+          }, 100);
+        }, 1200);
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage();
+        }
+      };
+
+      // 拖拽文件到对话界面: 计数器避免子元素 dragenter/dragleave 抖动
+      const handleDragEnter = (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.types && !Array.from(e.dataTransfer.types).includes('Files')) return;
+        dragDepthRef.current++;
+        setIsDragging(true);
+      };
+      const handleDragOver = (e) => e.preventDefault();
+      const handleDragLeave = (e) => {
+        e.preventDefault();
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) setIsDragging(false);
+      };
+      const handleDrop = (e) => {
+        e.preventDefault();
+        dragDepthRef.current = 0;
+        setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files || []);
+        if (files.length > 0) triggerToast(`已接收文件：${files[0].name}`);
+      };
+      const handleFileSelected = (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) triggerToast(`已选择文件：${files[0].name}`);
+        e.target.value = '';
+      };
+
+      return (
+        <div className="w-full flex flex-col items-center justify-center relative min-h-screen">
+          <Toast message={toastMsg} visible={showToast} />
+          {/* 隐藏的文件选择框: 纸夹按钮触发 */}
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelected} />
+
+          {/* Top Control Bar */}
+          <div className="mb-3 flex items-center justify-between w-full max-w-[420px] px-2 text-xs text-zinc-400">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-mono text-zinc-300 font-medium">智能客服界面推荐</span>
+            </div>
+            <button 
+              onClick={handleResetToScreenshot}
+              className="px-2.5 py-1 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all flex items-center gap-1 border border-zinc-700/60 active:scale-95"
+              title="重置页面至初始模拟状态"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              模拟状态
+            </button>
+          </div>
+
+          {/* Main Chat Panel */}
+          <div 
+            className={`relative w-full max-w-[420px] bg-[#0f0f11] text-zinc-200 border border-[#202025] rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${viewMode === 'fullscreen' ? 'h-[92vh] max-w-[680px]' : 'h-[780px]'}`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            
+            {/* Header Bar */}
+            <div className="px-4 py-3 bg-[#0f0f11] border-b border-[#1a1a1f] flex items-center justify-between select-none">
+              <div className="flex items-center gap-2">
+                <div className="text-zinc-200 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-zinc-200 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
+                    <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" strokeLinejoin="round" />
+                    <path d="M12 6L13.2 10.8L18 12L13.2 13.2L12 18L10.8 13.2L6 12L10.8 10.8L12 6Z" fill="currentColor" fillOpacity="0.15"/>
+                  </svg>
+                </div>
+                <span className="font-semibold text-[15px] tracking-wide text-zinc-100">智慧客服</span>
+              </div>
+
+              <div className="flex items-center gap-3 text-zinc-400">
+                <button 
+                  onClick={() => setViewMode(viewMode === 'panel' ? 'fullscreen' : 'panel')} 
+                  className="hover:text-zinc-100 transition-colors p-1 rounded hover:bg-zinc-800/50" 
+                  title={viewMode === 'panel' ? "扩大窗口" : "缩小窗口"}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                  </svg>
+                </button>
+
+                {messages.length > 0 && (
+                  <button 
+                    onClick={() => {
+                      setMessages([]);
+                      triggerToast('清空历史记录');
+                    }} 
+                    className="hover:text-zinc-100 transition-colors p-1 rounded hover:bg-zinc-800/50"
+                    title="清空记录"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                  </button>
+                )}
+
+                <button 
+                  onClick={() => triggerToast('点击关闭按钮')} 
+                  className="hover:text-zinc-100 transition-colors p-1 rounded hover:bg-zinc-800/50"
+                  title="关闭"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Messages List */}
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5 text-[14px] leading-relaxed">
+              
+              {messages.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500 py-12">
+                  <div className="w-12 h-12 rounded-full bg-zinc-800/50 flex items-center justify-center mb-3 text-zinc-400">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+                    </svg>
+                  </div>
+                  <p className="text-sm">暂无消息，请在下方提出您的问题</p>
+                </div>
+              )}
+
+              {}
+              {messages.map((msg) => {
+                if (msg.sender === 'user') {
+                  return (
+                    <div key={msg.id} className="flex justify-end pt-1">
+                      <div className="bg-[#1f1f23] text-zinc-100 px-4 py-2 rounded-2xl max-w-[85%] text-[14px] shadow-sm leading-normal">
+                        {msg.text}
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div key={msg.id} className="space-y-3.5 text-zinc-200">
+                      
+                      {msg.intro && (
+                        <p className="text-zinc-200">{msg.intro}</p>
+                      )}
+
+                      {msg.hasSearch && (
+                        <div>
+                          <button 
+                            onClick={() => setShowSearchSources(!showSearchSources)}
+                            className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors my-1 cursor-pointer group"
+                          >
+                            <svg className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="11" cy="11" r="8"/>
+                              <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <span className="underline decoration-zinc-600 underline-offset-2">{msg.searchQuery}</span>
+                          </button>
+
+                          {showSearchSources && msg.searchResults && (
+                            <div className="mt-2 p-2.5 bg-[#141418] border border-zinc-800/80 rounded-xl space-y-2 animate-fadeIn text-xs">
+                              <div className="text-zinc-400 text-[11px] font-medium pb-1 border-b border-zinc-800">检索到的知识源:</div>
+                              {msg.searchResults.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-zinc-300 hover:text-amber-300 cursor-pointer">
+                                  <span className="truncate max-w-[240px]">{item.title}</span>
+                                  <span className="text-[10px] text-zinc-500">{item.source}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {}
+                      {msg.contentBlocks && msg.contentBlocks.map((block, idx) => {
+                        if (block.type === 'paragraph') {
+                          return (
+                            <p key={idx} className="text-zinc-200">
+                              {block.text}
+                              {block.highlight && (
+                                <strong className="font-bold text-zinc-100">{block.highlight}</strong>
+                              )}
+                              {block.textAfter}
+                            </p>
+                          );
+                        }
+
+                        if (block.type === 'list') {
+                          return (
+                            <div key={idx} className="space-y-2 my-2">
+                              {block.items.map((item) => (
+                                <p key={item.id} className="text-zinc-200">
+                                  <strong className="font-bold text-zinc-100">{item.title}</strong>
+                                  <span className="text-zinc-300">{item.desc}</span>
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
+
+                        if (block.type === 'code') {
+                          return (
+                            <div key={idx} className="relative group my-3">
+                              <div className="bg-[#18181c] border border-[#27272e] rounded-xl px-3.5 py-3 pr-10 font-mono text-[13px] text-zinc-200 overflow-x-auto code-scroll whitespace-nowrap select-all shadow-inner">
+                                <span className="text-amber-500 font-semibold">claude</span>{' '}
+                                <span className="text-amber-200/90">mcp add github</span>{' '}
+                                <span className="text-emerald-400">npx -y</span>{' '}
+                                <span className="text-rose-400">@modelcontextprotocol/server-github</span>
+                              </div>
+
+                              <button 
+                                onClick={() => handleCopy(block.codeText, 'code-' + msg.id + '-' + idx, '已复制指令到剪贴板')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-100 bg-[#18181c]/80 hover:bg-zinc-700/60 rounded-md transition-colors"
+                                title="复制指令"
+                              >
+                                {copiedId === 'code-' + msg.id + '-' + idx ? (
+                                  <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        if (block.type === 'outro') {
+                          return (
+                            <p key={idx} className="text-zinc-200">
+                              {block.text1}
+                              {block.linkText && (
+                                <a 
+                                  href="#mcp-docs" 
+                                  onClick={(e) => { e.preventDefault(); triggerToast('跳转至 MCP 官方文档'); }}
+                                  className="font-bold text-zinc-100 underline decoration-zinc-100 underline-offset-4 hover:text-white transition-colors"
+                                >
+                                  {block.linkText}
+                                </a>
+                              )}
+                              {block.text2}
+                            </p>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      {/* Action Bar */}
+                      <div className="flex items-center gap-3.5 text-zinc-400 text-xs pt-1.5">
+                        <button 
+                          onClick={() => {
+                            setLikedMessageId(likedMessageId === msg.id ? null : msg.id);
+                            if (dislikedMessageId === msg.id) setDislikedMessageId(null);
+                            triggerToast(likedMessageId === msg.id ? '取消点赞' : '感谢反馈！');
+                          }}
+                          className={`hover:text-zinc-200 transition-colors ${likedMessageId === msg.id ? 'text-amber-400' : ''}`}
+                          title="赞"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/>
+                          </svg>
+                        </button>
+
+                        <button 
+                          onClick={() => {
+                            setDislikedMessageId(dislikedMessageId === msg.id ? null : msg.id);
+                            if (likedMessageId === msg.id) setLikedMessageId(null);
+                            triggerToast('已记录您的意见');
+                          }}
+                          className={`hover:text-zinc-200 transition-colors ${dislikedMessageId === msg.id ? 'text-rose-400' : ''}`}
+                          title="踩"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3zm7-13h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/>
+                          </svg>
+                        </button>
+
+                        <button 
+                          onClick={() => handleCopy(
+                            "可以。Claude Code 通过 MCP (Model Context Protocol) 接入第三方工具...",
+                            'answer-' + msg.id,
+                            '已复制回答内容'
+                          )}
+                          className="hover:text-zinc-200 transition-colors"
+                          title="复制回答"
+                        >
+                          {copiedId === 'answer-' + msg.id ? (
+                            <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                            </svg>
+                          )}
+                        </button>
+
+                        <button 
+                          onClick={() => triggerToast('正在重新生成回答...')}
+                          className="hover:text-zinc-200 transition-colors"
+                          title="重新生成"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                          </svg>
+                        </button>
+                      </div>
+
+                    </div>
+                  );
+                }
+              })}
+
+              {isThinking && (
+                <div className="flex items-center gap-2 text-zinc-400 text-xs py-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></div>
+                  <span>亲亲，请稍等，客服正在解决...</span>
+                </div>
+              )}
+
+            </div>
+
+            {}
+            <div className="p-3 bg-[#0f0f11]">
+              <div className="bg-[#151518] border border-[#26262c] rounded-2xl p-3 focus-within:border-zinc-600 transition-colors shadow-inner flex flex-col justify-between min-h-[96px] relative">
+                
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="提出问题..."
+                  rows={2}
+                  className="bg-transparent text-zinc-100 placeholder-zinc-500 text-[14px] outline-none resize-none w-full leading-normal"
+                />
+
+                <div className="flex items-center justify-between pt-2">
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-zinc-400 hover:text-zinc-200 p-1 rounded-md transition-colors"
+                    title="添加附件"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                  </button>
+
+                  <button 
+                    onClick={handleSendMessage}
+                    disabled={!inputText.trim()}
+                    className={`p-1.5 rounded-full transition-all flex items-center justify-center ${
+                      inputText.trim() 
+                        ? 'bg-zinc-200 text-zinc-900 hover:bg-white active:scale-95' 
+                        : 'text-zinc-500 hover:text-zinc-300 cursor-not-allowed'
+                    }`}
+                    title="发送消息"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5"/>
+                      <polyline points="5 12 12 5 19 12"/>
+                    </svg>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+            {/* 拖拽文件上传提示层: 拖入对话界面时整区显示 */}
+            {isDragging && (
+              <div className="absolute inset-0 z-20 bg-[#0f0f11]/85 backdrop-blur-[2px] flex items-center justify-center pointer-events-none animate-fadeIn rounded-2xl">
+                <div className="w-[calc(100%-24px)] h-[calc(100%-24px)] border-2 border-dashed border-amber-500/50 rounded-2xl flex flex-col items-center justify-center gap-1.5 select-none">
+                  <svg className="w-8 h-8 text-amber-400 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <p className="text-zinc-100 text-[15px] font-medium">拖拽文件到此处</p>
+                  <p className="text-zinc-500 text-xs">松开鼠标即可上传</p>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          <div className="mt-4 text-center text-xs text-zinc-500 font-sans">
+            智能客服为AI，回答可能有误，请认真核对详情。
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

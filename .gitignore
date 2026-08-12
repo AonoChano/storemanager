@@ -38,3 +38,6 @@ src/main/resources/application.properties
 
 ### 临时设计文件
 ./src/temp_design/
+### 本地工具产物 ###
+.playwright-cli/
+main-app-icons.png

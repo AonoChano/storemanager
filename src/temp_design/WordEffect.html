@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machinarium 风格交互手绘文字</title>
+  <!-- 引入 Google 手绘风格字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0d0d0d;
+      font-family: 'Architects Daughter', cursive, sans-serif;
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    /* 控制面板 UI */
+    .control-panel {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(25, 25, 25, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      padding: 12px 20px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .control-panel label {
+      color: #ccc;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-panel input[type="text"] {
+      background: #111;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 15px;
+      font-size: 16px;
+      outline: none;
+      font-family: inherit;
+      width: 180px;
+      transition: border-color 0.2s;
+    }
+
+    .control-panel input[type="text"]:focus {
+      border-color: #fff;
+    }
+
+    .control-panel input[type="range"] {
+      width: 90px;
+      accent-color: #fff;
+      cursor: pointer;
+    }
+
+    .btn-sound {
+      background: transparent;
+      border: 1px solid #555;
+      color: #aaa;
+      padding: 5px 12px;
+      border-radius: 15px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn-sound.active {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    .hint {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #555;
+      font-size: 13px;
+      pointer-events: none;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 控制面板 -->
+  <div class="control-panel">
+    <label>
+      内容:
+      <input type="text" id="textInput" value="machinarium" placeholder="输入自定义文字..." maxlength="20">
+    </label>
+
+    <label>
+      大小:
+      <input type="range" id="sizeRange" min="50" max="160" value="110">
+    </label>
+
+    <label>
+      弹性:
+      <input type="range" id="elasticityRange" min="1" max="5" value="3" step="0.1">
+    </label>
+
+    <button class="btn-sound" id="soundBtn">🔊 音效: 关</button>
+  </div>
+
+  <div class="hint">在文字上方移动鼠标触发交互</div>
+
+  <canvas id="sketchCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('sketchCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const textInput = document.getElementById('textInput');
+    const sizeRange = document.getElementById('sizeRange');
+    const elasticityRange = document.getElementById('elasticityRange');
+    const soundBtn = document.getElementById('soundBtn');
+
+    let dpr = window.devicePixelRatio || 1;
+    let mouse = { x: -9999, y: -9999, px: -9999, py: -9999, speed: 0 };
+    let letters = [];
+    let soundEnabled = false;
+
+    // Web Audio API 简单的铅笔划过音效生成器
+    let audioCtx = null;
+    function playScratchSound() {
+      if (!soundEnabled) return;
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      // 生成噪点声音模拟铅笔摩擦
+      const bufferSize = audioCtx.sampleRate * 0.03; 
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1200 + Math.random() * 800;
+      filter.Q.value = 3;
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      noise.start();
+    }
+
+    soundBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      soundBtn.textContent = soundEnabled ? "🔊 音效: 开" : "🔇 音效: 关";
+      soundBtn.classList.toggle('active', soundEnabled);
+    });
+
+    // 调整 Canvas 分辨率
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+      layoutLetters();
+    }
+
+    // 单个字符物理与渲染类
+    class Letter {
+      constructor(char, x, y, fontSize) {
+        this.char = char;
+        this.baseX = x;
+        this.baseY = y;
+        this.x = x;
+        this.y = y;
+
+        this.vx = 0;
+        this.vy = 0;
+
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.vScaleX = 0;
+        this.vScaleY = 0;
+
+        this.rotation = 0;
+        this.vRotation = 0;
+
+        this.fontSize = fontSize;
+        this.hoverAmount = 0;
+
+        // 手绘抖动随机种子
+        this.seed = Math.random() * 1000;
+      }
+
+      update(elasticityFactor) {
+        // 1. 计算鼠标与字母中心的距离
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = this.fontSize * 1.2;
+
+        if (dist < maxDist) {
+          const force = (1 - dist / maxDist);
+          const angle = Math.atan2(dy, dx);
+
+          // 推开力
+          const push = force * 25 * elasticityFactor;
+          this.vx -= Math.cos(angle) * push;
+          this.vy -= Math.sin(angle) * push;
+
+          // 挤压与拉伸 (Squash and Stretch)
+          this.vScaleX += force * 0.15 * (Math.random() > 0.5 ? 1 : -1);
+          this.vScaleY += force * 0.15 * (Math.random() > 0.5 ? 1 : -1);
+
+          // 旋转力
+          this.vRotation += (Math.random() - 0.5) * force * 0.2;
+
+          this.hoverAmount = Math.min(1, this.hoverAmount + 0.15);
+
+          if (mouse.speed > 2 && Math.random() < 0.3) {
+            playScratchSound();
+          }
+        } else {
+          this.hoverAmount = Math.max(0, this.hoverAmount - 0.05);
+        }
+
+        // 2. 弹簧-阻尼物理回弹计算
+        const stiffness = 0.08;
+        const damping = 0.75;
+
+        // 位置回弹
+        const fx = (this.baseX - this.x) * stiffness;
+        const fy = (this.baseY - this.y) * stiffness;
+        this.vx = (this.vx + fx) * damping;
+        this.vy = (this.vy + fy) * damping;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // 缩放回弹到 1.0
+        const fsx = (1 - this.scaleX) * stiffness;
+        const fsy = (1 - this.scaleY) * stiffness;
+        this.vScaleX = (this.vScaleX + fsx) * damping;
+        this.vScaleY = (this.vScaleY + fsy) * damping;
+        this.scaleX += this.vScaleX;
+        this.scaleY += this.vScaleY;
+
+        // 旋转回弹到 0
+        const fr = (0 - this.rotation) * stiffness;
+        this.vRotation = (this.vRotation + fr) * damping;
+        this.rotation += this.vRotation;
+      }
+
+      draw(frame) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.scale(this.scaleX, this.scaleY);
+
+        ctx.font = `700 ${this.fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 核心：多重草稿线 & 沸腾抖动 (Boiling line offset)
+        const jitterFreq = Math.floor(frame / 3); // 每 3 帧改变一次抖动形态
+        const seed = this.seed + jitterFreq;
+
+        // 基础噪音函数
+        const noise = (s) => (Math.sin(s * 9999) * 10000) % 1;
+
+        // 1. 悬停时的额外手绘草稿环/幻影
+        if (this.hoverAmount > 0.1) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.15 * this.hoverAmount})`;
+          ctx.lineWidth = 1.5;
+          for (let i = 0; i < 2; i++) {
+            const ox = (noise(seed + i * 10) - 0.5) * 8 * this.hoverAmount;
+            const oy = (noise(seed + i * 20) - 0.5) * 8 * this.hoverAmount;
+            ctx.strokeText(this.char, ox, oy);
+          }
+        }
+
+        // 2. 底层浅色粗糙轮廓（增加线条质感）
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 3;
+        const ox1 = (noise(seed + 1) - 0.5) * 2.5;
+        const oy1 = (noise(seed + 2) - 0.5) * 2.5;
+        ctx.strokeText(this.char, ox1, oy1);
+
+        // 3. 顶层主白色描边与填充
+        ctx.fillStyle = '#f0f0f0';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+
+        const ox2 = (noise(seed + 3) - 0.5) * 1.5;
+        const oy2 = (noise(seed + 4) - 0.5) * 1.5;
+
+        ctx.fillText(this.char, ox2, oy2);
+        ctx.strokeText(this.char, ox2, oy2);
+
+        ctx.restore();
+      }
+    }
+
+    // 布局字母
+    function layoutLetters() {
+      letters = [];
+      const text = textInput.value || "machinarium";
+      const fontSize = parseInt(sizeRange.value);
+
+      ctx.font = `700 ${fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
+
+      // 计算文本总宽度
+      let totalWidth = 0;
+      const letterWidths = [];
+
+      for (let i = 0; i < text.length; i++) {
+        const w = ctx.measureText(text[i]).width;
+        letterWidths.push(w);
+        totalWidth += w;
+      }
+
+      // 居中起始点
+      let currentX = (window.innerWidth - totalWidth) / 2;
+      const startY = window.innerHeight / 2;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const w = letterWidths[i];
+        const x = currentX + w / 2;
+
+        letters.push(new Letter(char, x, startY, fontSize));
+        currentX += w;
+      }
+    }
+
+    // 动画循环
+    let frame = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      frame++;
+
+      // 计算鼠标移动速度
+      const mdx = mouse.x - mouse.px;
+      const mdy = mouse.y - mouse.py;
+      mouse.speed = Math.sqrt(mdx * mdx + mdy * mdy);
+      mouse.px = mouse.x;
+      mouse.py = mouse.y;
+
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      const elasticity = parseFloat(elasticityRange.value);
+
+      // 更新并绘制每个字符
+      for (let letter of letters) {
+        letter.update(elasticity);
+        letter.draw(frame);
+      }
+    }
+
+    // 事件监听
+    window.addEventListener('resize', resize);
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseleave', () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    });
+
+    // 触摸支持 (移动端)
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    });
+
+    textInput.addEventListener('input', layoutLetters);
+    sizeRange.addEventListener('input', layoutLetters);
+
+    // 初始化
+    document.fonts.ready.then(() => {
+      resize();
+      animate();
+    });
+  </script>
+</body>
+</html>

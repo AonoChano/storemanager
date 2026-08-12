@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📦 knights-of-round-table - 登录与注册</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0d0d0d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #e0e0e0;
+    }
+
+    .container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 左侧 Canvas 区域 */
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      background: #0a0a0a;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    /* 隐藏的控制台（保留以备后用） */
+    .control-panel {
+      display: none;
+    }
+
+    /* 右侧 表单区域 (严肃严谨风格) */
+    .form-panel {
+      width: 450px;
+      background: #141414;
+      border-left: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 50px;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .form-box {
+      width: 100%;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .form-box.hidden {
+      display: none;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    .form-box.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .form-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 30px;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: #000000;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 12px 15px;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: #666;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+
+    .btn-submit:hover {
+      background: #e0e0e0;
+    }
+
+    .toggle-link {
+      margin-top: 25px;
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+    }
+
+    .toggle-link a {
+      color: #bbb;
+      text-decoration: none;
+      margin-left: 5px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .toggle-link a:hover {
+      color: #fff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 左侧交互展示 -->
+    <div class="canvas-container">
+      <div class="control-panel">
+        <input type="text" id="textInput" value="📦 knights-of-round-table">
+        <input type="range" id="sizeRange" value="50">
+        <input type="range" id="elasticityRange" value="1.5">
+      </div>
+      <canvas id="sketchCanvas"></canvas>
+    </div>
+
+    <!-- 右侧严谨登录/注册面板 -->
+    <div class="form-panel">
+      <!-- 登录表单 -->
+      <div id="loginForm" class="form-box active">
+        <div class="form-title">系统登录</div>
+        <form id="formLogin">
+          <div class="input-group">
+            <label>用户名或邮箱</label>
+            <input type="text" name="username" required autocomplete="username">
+          </div>
+          <div class="input-group">
+            <label>密码</label>
+            <input type="password" name="password" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn-submit">登 录</button>
+        </form>
+        <div class="toggle-link">
+          还没有账户？ <a id="toRegister">前往注册</a>
+        </div>
+      </div>
+
+      <!-- 注册表单 -->
+      <div id="registerForm" class="form-box hidden">
+        <div class="form-title">创建账户</div>
+        <form id="formRegister">
+          <div class="input-group">
+            <label>用户名</label>
+            <input type="text" name="reg_username" required autocomplete="username">
+          </div>
+          <div class="input-group">
+            <label>邮箱</label>
+            <input type="email" name="reg_email" required autocomplete="email">
+          </div>
+          <div class="input-group">
+            <label>密码</label>
+            <input type="password" name="reg_password" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn-submit">注 册</button>
+        </form>
+        <div class="toggle-link">
+          已有账户？ <a id="toLogin">返回登录</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. 表单交互逻辑 (便于对接后端)
+    // ==========================================
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const toRegister = document.getElementById('toRegister');
+    const toLogin = document.getElementById('toLogin');
+
+    const formLogin = document.getElementById('formLogin');
+    const formRegister = document.getElementById('formRegister');
+
+    // 切换面板逻辑
+    toRegister.addEventListener('click', () => {
+      loginForm.classList.remove('active');
+      loginForm.classList.add('hidden');
+      registerForm.classList.remove('hidden');
+      // 延时添加active以触发过渡动画
+      setTimeout(() => registerForm.classList.add('active'), 50);
+    });
+
+    toLogin.addEventListener('click', () => {
+      registerForm.classList.remove('active');
+      registerForm.classList.add('hidden');
+      loginForm.classList.remove('hidden');
+      setTimeout(() => loginForm.classList.add('active'), 50);
+    });
+
+    // 登录提交事件拦截
+    formLogin.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const formData = new FormData(formLogin);
+      const data = Object.fromEntries(formData.entries());
+      console.log('【后端对接预留 - 登录】:', data);
+      // TODO: fetch('/api/login', { method: 'POST', body: JSON.stringify(data) ... })
+    });
+
+    // 注册提交事件拦截
+    formRegister.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const formData = new FormData(formRegister);
+      const data = Object.fromEntries(formData.entries());
+      console.log('【后端对接预留 - 注册】:', data);
+      // TODO: fetch('/api/register', { method: 'POST', body: JSON.stringify(data) ... })
+    });
+
+    // ==========================================
+    // 2. 交互文字物理引擎逻辑 (优化版)
+    // ==========================================
+    const canvas = document.getElementById('sketchCanvas');
+    const ctx = canvas.getContext('2d');
+    const textInput = document.getElementById('textInput');
+    const sizeRange = document.getElementById('sizeRange');
+    const elasticityRange = document.getElementById('elasticityRange');
+
+    let dpr = window.devicePixelRatio || 1;
+    let mouse = { x: -9999, y: -9999, px: -9999, py: -9999, speed: 0 };
+    let letters = [];
+    let canvasContainer = document.querySelector('.canvas-container');
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = canvasContainer.clientWidth * dpr;
+      canvas.height = canvasContainer.clientHeight * dpr;
+      ctx.scale(dpr, dpr);
+      layoutLetters();
+    }
+
+    class Letter {
+      constructor(char, x, y, fontSize) {
+        this.char = char;
+        this.baseX = x;
+        this.baseY = y;
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.vScaleX = 0;
+        this.vScaleY = 0;
+        this.rotation = 0;
+        this.vRotation = 0;
+        this.fontSize = fontSize;
+        this.hoverAmount = 0;
+        this.seed = Math.random() * 1000;
+      }
+
+      update(elasticityFactor) {
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // 【修改项1】缩小触发半径，几乎碰到才触发
+        const maxDist = this.fontSize * 0.45; 
+
+        if (dist < maxDist) {
+          const force = (1 - dist / maxDist);
+          const angle = Math.atan2(dy, dx);
+
+          // 【修改项2】大幅度降低推力，减小夸张的弹性
+          const push = force * 6 * elasticityFactor;
+          this.vx -= Math.cos(angle) * push;
+          this.vy -= Math.sin(angle) * push;
+
+          this.vScaleX += force * 0.05 * (Math.random() > 0.5 ? 1 : -1);
+          this.vScaleY += force * 0.05 * (Math.random() > 0.5 ? 1 : -1);
+          this.vRotation += (Math.random() - 0.5) * force * 0.08;
+          
+          this.hoverAmount = Math.min(1, this.hoverAmount + 0.15);
+        } else {
+          this.hoverAmount = Math.max(0, this.hoverAmount - 0.1);
+        }
+
+        // 弹簧阻尼
+        const stiffness = 0.15; // 提高硬度，回弹更快
+        const damping = 0.65;   // 增加阻尼，减少反复抖动次数
+
+        const fx = (this.baseX - this.x) * stiffness;
+        const fy = (this.baseY - this.y) * stiffness;
+        this.vx = (this.vx + fx) * damping;
+        this.vy = (this.vy + fy) * damping;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        const fsx = (1 - this.scaleX) * stiffness;
+        const fsy = (1 - this.scaleY) * stiffness;
+        this.vScaleX = (this.vScaleX + fsx) * damping;
+        this.vScaleY = (this.vScaleY + fsy) * damping;
+        this.scaleX += this.vScaleX;
+        this.scaleY += this.vScaleY;
+
+        const fr = (0 - this.rotation) * stiffness;
+        this.vRotation = (this.vRotation + fr) * damping;
+        this.rotation += this.vRotation;
+      }
+
+      draw(frame) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.scale(this.scaleX, this.scaleY);
+
+        ctx.font = `700 ${this.fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 【修改项3】大幅度降低抖动频率，帧数除数增大
+        const jitterFreq = Math.floor(frame / 12); 
+        const seed = this.seed + jitterFreq;
+
+        const noise = (s) => (Math.sin(s * 9999) * 10000) % 1;
+
+        if (this.hoverAmount > 0.1) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 * this.hoverAmount})`;
+          ctx.lineWidth = 1;
+          for (let i = 0; i < 2; i++) {
+            const ox = (noise(seed + i * 10) - 0.5) * 5 * this.hoverAmount;
+            const oy = (noise(seed + i * 20) - 0.5) * 5 * this.hoverAmount;
+            ctx.strokeText(this.char, ox, oy);
+          }
+        }
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        const ox1 = (noise(seed + 1) - 0.5) * 1.5;
+        const oy1 = (noise(seed + 2) - 0.5) * 1.5;
+        ctx.strokeText(this.char, ox1, oy1);
+
+        ctx.fillStyle = '#f0f0f0';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+
+        const ox2 = (noise(seed + 3) - 0.5) * 0.8;
+        const oy2 = (noise(seed + 4) - 0.5) * 0.8;
+
+        ctx.fillText(this.char, ox2, oy2);
+        ctx.strokeText(this.char, ox2, oy2);
+
+        ctx.restore();
+      }
+    }
+
+    function layoutLetters() {
+      letters = [];
+      const text = textInput.value;
+      const fontSize = parseInt(sizeRange.value);
+
+      ctx.font = `700 ${fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
+
+      let totalWidth = 0;
+      const letterWidths = [];
+
+      for (let i = 0; i < text.length; i++) {
+        const w = ctx.measureText(text[i]).width;
+        letterWidths.push(w);
+        totalWidth += w;
+      }
+
+      // 计算起始位置保证居中
+      let currentX = (canvasContainer.clientWidth - totalWidth) / 2;
+      const startY = canvasContainer.clientHeight / 2;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const w = letterWidths[i];
+        const x = currentX + w / 2;
+        letters.push(new Letter(char, x, startY, fontSize));
+        currentX += w;
+      }
+    }
+
+    let frame = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      frame++;
+
+      const mdx = mouse.x - mouse.px;
+      const mdy = mouse.y - mouse.py;
+      mouse.speed = Math.sqrt(mdx * mdx + mdy * mdy);
+      mouse.px = mouse.x;
+      mouse.py = mouse.y;
+
+      ctx.clearRect(0, 0, canvasContainer.clientWidth, canvasContainer.clientHeight);
+      const elasticity = parseFloat(elasticityRange.value);
+
+      for (let letter of letters) {
+        letter.update(elasticity);
+        letter.draw(frame);
+      }
+    }
+
+    window.addEventListener('resize', resize);
+    
+    // 只监听 canvas 容器内的鼠标事件
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    });
+
+    document.fonts.ready.then(() => {
+      resize();
+      animate();
+    });
+  </script>
+</body>
+</html>

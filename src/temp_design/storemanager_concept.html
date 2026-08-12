@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoreManager - Classical Archive</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper-bg: #f4efd8;
+            --paper-light: #fbf9ec;
+            --ink-dark: #2c2824;
+            --ink-light: #5c5549;
+            --stamp-red: #8b3a3a;
+            --shadow-color: rgba(44, 40, 36, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--paper-bg);
+            /* 纯 CSS 模拟的微弱纸张噪点与经纬纹理 */
+            background-image: 
+                radial-gradient(circle at 50% 50%, transparent 20%, rgba(139, 126, 102, 0.05) 100%),
+                repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px);
+            font-family: 'Playfair Display', serif;
+            color: var(--ink-dark);
+            display: flex;
+        }
+
+        #desktop-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 左侧动画区：占据主视野，作为背景延伸 */
+        #vintage-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none; /* 让鼠标可以穿透画布点击后续元素 */
+        }
+
+        /* 纯 CSS 营造的光影晕染，增强立体感 */
+        .ambient-lighting {
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 70vw;
+            height: 70vw;
+            background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 右侧登录栏：伪装成档案登记卡 */
+        .archive-card {
+            position: relative;
+            z-index: 10;
+            width: 380px;
+            height: 100vh;
+            margin-left: auto; /* 靠右贴合 */
+            background-color: var(--paper-light);
+            padding: 4rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* 模拟纸张堆叠的厚度与右侧光源的投影 */
+            box-shadow: -15px 0 40px var(--shadow-color),
+                        -1px 0 0 rgba(255,255,255,0.5) inset;
+            border-left: 1px solid rgba(139, 126, 102, 0.2);
+        }
+
+        .card-header {
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .card-header h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-header p {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--ink-light);
+        }
+
+        /* 模拟古典印章或编目号 */
+        .stamp-mark {
+            position: absolute;
+            top: -1.5rem;
+            right: 0;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--stamp-red);
+            border: 1px solid var(--stamp-red);
+            padding: 0.2rem 0.4rem;
+            transform: rotate(5deg);
+            opacity: 0.8;
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--ink-light);
+            margin-bottom: 0.3rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* 输入框：摒弃边框，采用老式表格的底线设计 */
+        .form-group input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(44, 40, 36, 0.3);
+            padding: 0.5rem 0;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            color: var(--ink-dark);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-bottom-color: var(--ink-dark);
+        }
+
+        /* 占位符使用更柔和的斜体 */
+        .form-group input::placeholder {
+            font-style: italic;
+            color: rgba(92, 85, 73, 0.4);
+            font-size: 0.9rem;
+        }
+
+        /* 提交按钮：物理按压感与老式金属铭牌质感 */
+        .submit-btn {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--ink-dark);
+            color: var(--paper-light);
+            border: none;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover {
+            background: #1a1714;
+            transform: translateY(1px); /* 物理阻尼下沉 */
+        }
+
+        .submit-btn:active {
+            transform: translateY(3px);
+        }
+
+        /* 页脚注释 */
+        .card-footer {
+            margin-top: auto;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--ink-light);
+            text-align: center;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 768px) {
+            .archive-card {
+                width: 100%;
+                box-shadow: none;
+                background-color: rgba(251, 249, 236, 0.95);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="desktop-container">
+    <div class="ambient-lighting"></div>
+    
+    <!-- 承载古典测绘/数据流转概念的画布 -->
+    <canvas id="vintage-canvas"></canvas>
+
+    <!-- 档案登记卡（登录栏） -->
+    <div class="archive-card">
+        <div class="card-header">
+            <div class="stamp-mark">VOL. IV - 2026</div>
+            <h1>StoreManager</h1>
+            <p>Inventory & Logistics Archive</p>
+        </div>
+
+        <form onsubmit="event.preventDefault();">
+            <div class="form-group">
+                <label>IDENTIFIER (USER ID)</label>
+                <input type="text" placeholder="e.g. Curator-01" required autocomplete="off">
+            </div>
+            
+            <div class="form-group">
+                <label>ACCESS CIPHER (PASSWORD)</label>
+                <input type="password" placeholder="Enter your cipher..." required>
+            </div>
+
+            <button type="submit" class="submit-btn">Unlock Archive</button>
+        </form>
+
+        <div class="card-footer">
+            <p>RESTRICTED ACCESS • PROPERTY OF THE GUILD</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('vintage-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    let width, height;
+    let nodes = [];
+    let edges = [];
+    let time = 0;
+
+    // 调色板：复古墨水与羊皮纸的对应色
+    const colors = {
+        ink: 'rgba(44, 40, 36, 0.8)',
+        inkLight: 'rgba(92, 85, 73, 0.3)',
+        highlight: 'rgba(139, 58, 58, 0.6)', // 类似火漆红
+        grid: 'rgba(139, 126, 102, 0.1)'
+    };
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        initGraph();
+    }
+    window.addEventListener('resize', resize);
+
+    class Node {
+        constructor(x, y, isPrimary) {
+            this.baseX = x;
+            this.baseY = y;
+            // 添加非常缓慢的物理漂浮感，模拟纸张微动或呼吸感
+            this.phase = Math.random() * Math.PI * 2;
+            this.radius = isPrimary ? 4 : 2;
+            this.isPrimary = isPrimary;
+        }
+
+        update(t) {
+            // 极度缓慢的阻尼运动
+            this.x = this.baseX + Math.sin(this.phase + t * 0.5) * 15;
+            this.y = this.baseY + Math.cos(this.phase + t * 0.4) * 15;
+        }
+
+        draw(ctx) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.isPrimary ? colors.highlight : colors.ink;
+            ctx.fill();
+            
+            // 为主节点绘制类似古典罗盘或测绘标记的外圈
+            if (this.isPrimary) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 3, 0, Math.PI * 2);
+                ctx.strokeStyle = colors.inkLight;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+        }
+    }
+
+    class Edge {
+        constructor(nodeA, nodeB) {
+            this.a = nodeA;
+            this.b = nodeB;
+            // 贝塞尔曲线的控制点偏移
+            this.cpOffset = (Math.random() - 0.5) * 100;
+            this.drawProgress = Math.random(); // 模拟缓慢书写的过程
+        }
+
+        draw(ctx, t) {
+            const dx = this.b.x - this.a.x;
+            const dy = this.b.y - this.a.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            // 距离太远不连线
+            if(dist > 400) return;
+
+            // 计算控制点以生成优雅的弧线（而非僵硬的直线）
+            const midX = (this.a.x + this.b.x) / 2;
+            const midY = (this.a.y + this.b.y) / 2;
+            const angle = Math.atan2(dy, dx);
+            const cpX = midX + Math.cos(angle + Math.PI/2) * this.cpOffset;
+            const cpY = midY + Math.sin(angle + Math.PI/2) * this.cpOffset;
+
+            // 动态虚线效果，模拟墨水流淌或路线规划
+            this.drawProgress -= 0.002; // 流动速度极缓，强调从容感
+            
+            ctx.beginPath();
+            ctx.moveTo(this.a.x, this.a.y);
+            ctx.quadraticCurveTo(cpX, cpY, this.b.x, this.b.y);
+            
+            ctx.strokeStyle = colors.inkLight;
+            ctx.lineWidth = 0.8;
+            
+            // 使用虚线模拟古典手绘航海图的路径线
+            ctx.setLineDash([4, 6]);
+            ctx.lineDashOffset = this.drawProgress * 100;
+            
+            // 越靠近右侧卡片（X轴偏大处），透明度越高，实现视觉融入
+            const alpha = Math.max(0, 1 - (this.a.x / width) * 1.2);
+            ctx.strokeStyle = `rgba(92, 85, 73, ${0.4 * alpha})`;
+            
+            ctx.stroke();
+            ctx.setLineDash([]); // 恢复实线
+        }
+    }
+
+    function initGraph() {
+        nodes = [];
+        edges = [];
+        
+        // 在左侧及中左区域生成节点，避开右侧卡片
+        const nodeCount = Math.floor((width * height) / 25000);
+        for(let i=0; i<nodeCount; i++) {
+            const x = Math.random() * (width * 0.7); // 限制在左侧70%
+            const y = Math.random() * height;
+            // 15% 的几率成为带有红色标记的“主仓库”节点
+            const isPrimary = Math.random() > 0.85;
+            nodes.push(new Node(x, y, isPrimary));
+        }
+
+        // 建立连接网络（仅连接临近节点）
+        for(let i=0; i<nodes.length; i++) {
+            for(let j=i+1; j<nodes.length; j++) {
+                const dx = nodes[i].baseX - nodes[j].baseX;
+                const dy = nodes[i].baseY - nodes[j].baseY;
+                if(dx*dx + dy*dy < 40000) { // 约200px范围内连线
+                    if(Math.random() > 0.4) { // 不必全连，留白
+                        edges.push(new Edge(nodes[i], nodes[j]));
+                    }
+                }
+            }
+        }
+    }
+
+    function drawGrid(ctx) {
+        // 绘制古典比例尺/测绘网格作为背景底纹
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 1;
+        const gridSize = 100;
+        
+        ctx.beginPath();
+        for(let x = 0; x < width; x += gridSize) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+        }
+        for(let y = 0; y < height; y += gridSize) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+        }
+        ctx.stroke();
+        
+        // 绘制一些古典制图学中的十字标记 (Fiducial marks)
+        ctx.strokeStyle = colors.inkLight;
+        ctx.lineWidth = 0.5;
+        const marks = [
+            {x: 50, y: 50}, {x: 50, y: height-50},
+            {x: width*0.6, y: 50}, {x: width*0.6, y: height-50}
+        ];
+        
+        marks.forEach(m => {
+            ctx.beginPath();
+            ctx.moveTo(m.x - 10, m.y); ctx.lineTo(m.x + 10, m.y);
+            ctx.moveTo(m.x, m.y - 10); ctx.lineTo(m.x, m.y + 10);
+            ctx.stroke();
+            // 添加小刻度数值
+            ctx.fillStyle = colors.inkLight;
+            ctx.font = '10px "Space Mono", monospace';
+            ctx.fillText(`+${m.x.toFixed(0)}`, m.x + 12, m.y + 4);
+        });
+    }
+
+    function animate() {
+        // 每次清空画布，但留下极其微弱的残影来模拟墨水晕染
+        ctx.fillStyle = 'rgba(244, 239, 216, 0.3)'; // 与 var(--paper-bg) 呼应
+        ctx.fillRect(0, 0, width, height);
+
+        time += 0.01;
+
+        drawGrid(ctx);
+
+        // 先绘制连线，再绘制节点（覆盖在上方）
+        edges.forEach(edge => edge.draw(ctx, time));
+        
+        nodes.forEach(node => {
+            node.update(time);
+            // 只绘制视野范围内的节点
+            if(node.x < width * 0.8) {
+                node.draw(ctx);
+            }
+        });
+
+        requestAnimationFrame(animate);
+    }
+
+    // 启动引擎
+    resize();
+    animate();
+
+</script>
+</body>
+</html>
