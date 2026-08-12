@@ -40,6 +40,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         //计算总金额使用bigdecimal
         BigDecimal total=BigDecimal.ZERO;//初始化"0"
         for(PurchaseOrderDetail detail: Order.getDetails()){//detail作为属性直接存在purchaseOrder里面别忘了
+            if(detail.getPrice().signum()<=0){
+                throw new RuntimeException("金额不能为负");
+            }
+            if(detail.getQuantity()<0){
+                throw new RuntimeException("数量不能为负");
+            }
             detail.setAmount( detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));//计算出某一类商品:单价*总数
             total=total.add(detail.getAmount());
             }//到这里单条流水金额计算成功

@@ -41,8 +41,15 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         BigDecimal total=BigDecimal.ZERO;
         for(SaleOrderDetail detail:order.getDetails()){
             Integer trueQuantity= productMapper.selectByPrimaryKey((detail.getProductId())).getStock();
+            if(detail.getQuantity()<0
+            ){
+                throw new RuntimeException("数量不能为负");
+            }
             if(trueQuantity==null||trueQuantity<detail.getQuantity()){
                 throw new RuntimeException("库存不足,当前库存为:"+productMapper.selectByPrimaryKey((detail.getProductId())).getName()+"仅剩:"+trueQuantity);
+            }
+            if(detail.getPrice().signum()<=0){
+                throw new RuntimeException("金额不能为负数");
             }
             detail.setAmount(detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())));//每件商品的总价
             total=total.add(detail.getAmount());

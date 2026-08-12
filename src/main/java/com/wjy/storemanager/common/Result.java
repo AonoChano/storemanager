@@ -23,6 +23,11 @@ public class Result<T> {
         return result;
     }
 
+    /**sale_order_detail
+     * Result<Void>使用return Result.success()
+     * @return
+     * @param <T>
+     */
     public static <T> Result<T> success(){
         return success(null);
     }
@@ -33,7 +38,4 @@ public class Result<T> {
         result.setMsg(msg);
         return result;
     }
-
-
-
 }
