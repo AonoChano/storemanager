@@ -32,11 +32,7 @@
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
       "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-    background:
-      radial-gradient(1100px 560px at 85% -8%, rgba(139, 92, 246, 0.14), transparent 60%),
-      radial-gradient(900px 480px at -6% 15%, rgba(79, 124, 255, 0.10), transparent 55%),
-      radial-gradient(700px 400px at 50% 110%, rgba(34, 211, 238, 0.06), transparent 60%),
-      var(--bg);
+    background: var(--bg);
     color: var(--text);
     min-height: 100dvh;
     -webkit-font-smoothing: antialiased;
@@ -56,13 +52,10 @@
   .logo {
     width: 38px; height: 38px; border-radius: 11px;
     display: grid; place-items: center; font-size: 20px;
-    background: linear-gradient(135deg, rgba(79,124,255,.4), rgba(139,92,246,.25));
-    box-shadow: 0 4px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.1);
-    border: 1px solid rgba(139,156,255,.35);
+    background: rgba(79,124,255,.16);
+    border: 1px solid rgba(139,156,255,.3);
   }
-  .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em;
-    background: linear-gradient(90deg, #7fa3ff, #b79aff);
-    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em; color: #dfe6f7; }
   .brand .sub { font-size: 11px; color: var(--faint); margin-top: 1px; }
   .session { display: flex; align-items: center; gap: 14px; }
   .online { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); }
@@ -76,11 +69,11 @@
   .btn {
     padding: 8px 15px; border: 1px solid transparent; border-radius: var(--radius-sm);
     font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
-    background: linear-gradient(135deg, var(--blue), var(--violet));
+    background: var(--blue);
     color: #fff;
-    transition: transform .18s ease, box-shadow .18s ease, filter .18s;
+    transition: transform .18s ease, filter .18s;
   }
-  .btn:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); transform: translateY(-1px); filter: brightness(1.15); }
+  .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
   .btn:active { transform: scale(0.96); }
   .btn.ghost { background: transparent; border-color: var(--border); color: var(--dim); }
   .btn.ghost:hover { color: var(--text); box-shadow: none; border-color: rgba(139,156,255,.4); }
@@ -110,11 +103,9 @@
     width: 100%; max-width: 360px; padding: 34px 30px;
     background: var(--surface); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     border: 1px solid var(--border); border-radius: 18px;
-    box-shadow: 0 24px 70px rgba(0,0,0,.55);
+    box-shadow: 0 12px 36px rgba(0,0,0,.35);
   }
-  #loginCard h2 { margin: 0 0 24px; text-align: center; font-size: 25px; letter-spacing: -.01em;
-    background: linear-gradient(90deg, #7fa3ff, #c4a7ff);
-    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #loginCard h2 { margin: 0 0 24px; text-align: center; font-size: 25px; letter-spacing: -.01em; color: var(--text); }
   .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
   .field label { font-size: 12px; color: var(--dim); }
   .field input, .field select { width: 100%; }
@@ -130,14 +121,9 @@
   .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
   .kpi {
     position: relative; overflow: hidden;
-    background: linear-gradient(150deg, rgba(79,124,255,.14), rgba(139,92,246,.10), transparent 75%);
+    background: rgba(255,255,255,.03);
     border: 1px solid var(--border); border-radius: var(--radius);
     padding: 18px 20px;
-  }
-  .kpi::after {
-    content: ""; position: absolute; top: -60px; right: -60px; width: 140px; height: 140px;
-    border-radius: 50%; background: radial-gradient(circle, rgba(79,124,255,.35), transparent 70%);
-    filter: blur(10px); pointer-events: none;
   }
   .kpi-label { font-size: 12px; color: var(--dim); letter-spacing: .03em; }
   .kpi-num { margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -.01em;
@@ -161,8 +147,8 @@
   .tab:hover { color: var(--text); }
   .tab.active {
     color: #fff;
-    background: linear-gradient(135deg, rgba(79,124,255,.28), rgba(139,92,246,.22));
-    box-shadow: inset 0 0 0 1px rgba(139,156,255,.3);
+    background: rgba(79,124,255,.16);
+    box-shadow: inset 0 0 0 1px rgba(79,124,255,.35);
   }
 
   /* ===== 面板/卡片 ===== */
@@ -178,7 +164,7 @@
   .card-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .01em;
     display: flex; align-items: center; gap: 10px; }
   .card-head h2::before { content: ""; width: 3px; height: 16px; border-radius: 2px;
-    background: linear-gradient(180deg, var(--blue), var(--violet)); }
+    background: var(--blue); }
   .card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
   /* ===== 图表网格 ===== */
@@ -220,7 +206,7 @@
   #toastWrap { position: fixed; right: 22px; bottom: 22px; z-index: 100; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
   .toast { display: flex; align-items: center; gap: 9px; padding: 11px 16px; border-radius: 10px; font-size: 13px;
     color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
-    box-shadow: 0 14px 40px rgba(0,0,0,.5); animation: toastIn .3s cubic-bezier(.2,.8,.2,1); }
+    box-shadow: 0 6px 20px rgba(0,0,0,.35); animation: toastIn .3s cubic-bezier(.2,.8,.2,1); }
   .toast.ok { border-color: rgba(52,211,153,.5); } .toast.ok::before { content: "✓"; color: var(--green); font-weight: 700; }
   .toast.err { border-color: rgba(251,113,133,.5); } .toast.err::before { content: "!"; color: var(--red); font-weight: 700; }
   .toast.info::before { content: "·"; color: var(--blue); font-weight: 900; font-size: 18px; line-height: 0; }
@@ -230,10 +216,10 @@
   #chatFab {
     position: fixed; left: 22px; bottom: 22px; z-index: 90;
     width: 52px; height: 52px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--blue), var(--violet));
+    background: var(--blue);
     border: 1px solid rgba(139,156,255,.4);
     display: grid; place-items: center; font-size: 22px; cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
     transition: transform .18s, filter .18s;
   }
   #chatFab:hover { transform: translateY(-2px); filter: brightness(1.12); }
@@ -250,13 +236,13 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 16px; border-bottom: 1px solid var(--border);
     font-weight: 650; font-size: 14px;
-    background: linear-gradient(120deg, rgba(79,124,255,.15), transparent);
+    background: rgba(255,255,255,.03);
   }
   .chat-close { background: none; border: none; color: var(--dim); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
   .chat-close:hover { color: var(--text); }
   .chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
   .chat-msg { max-width: 82%; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .chat-msg.user { align-self: flex-end; background: linear-gradient(135deg, rgba(79,124,255,.8), rgba(139,92,246,.7)); color: #fff; border-bottom-right-radius: 3px; }
+  .chat-msg.user { align-self: flex-end; background: rgba(79,124,255,.85); color: #fff; border-bottom-right-radius: 3px; }
   .chat-msg.bot { align-self: flex-start; background: rgba(255,255,255,.06); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
   .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
   .chat-input-row input { flex: 1; }
@@ -338,7 +324,7 @@
           <h2>经营总览</h2>
           <div class="card-actions">
             <button class="btn ghost" onclick="loadOverview()">刷新数据</button>
-            <span class="tag">数据来自你的真实业务</span>
+            <span class="tag">实时数据</span>
           </div>
         </div>
         <div class="chart-grid">
@@ -790,6 +776,9 @@ async function loadOverview() {
       get('/report/categoryStock'),
       get('/saleOrderDetail/profit')
     ]);
+    // 空数据占位: 无数据时显示提示而不是空白坐标轴
+    const EMPTY_CHART = msg => ({ graphic: { type: 'text', left: 'center', top: 'middle',
+      style: { text: msg, fill: '#5b6478', fontSize: 13 } } });
     const today = dateKey(new Date());
     const todaySale = Number((trend.find(t => t.day === today) || {}).amount || 0);
     const totalStock = products.reduce((s, p) => s + (p.stock || 0), 0);
@@ -809,12 +798,14 @@ async function loadOverview() {
       yAxis: { type: 'value', ...split },
       series: [{
         name: '销售额', type: 'line', smooth: true, symbolSize: 6, data: trend.map(t => t.amount),
-        lineStyle: { width: 3, color: '#4f7cff', shadowColor: 'rgba(79,124,255,.7)', shadowBlur: 14 },
+        lineStyle: { width: 2.5, color: '#4f7cff' },
         itemStyle: { color: '#4f7cff', borderColor: '#fff', borderWidth: 1 },
         areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[
           { offset: 0, color: 'rgba(79,124,255,.4)' }, { offset: 1, color: 'rgba(79,124,255,0)' }]) }
       }]
     });
+
+    if (!trend.length) { charts.trend.clear(); charts.trend.setOption(EMPTY_CHART('暂无销售数据')); }
 
     // 2 采购 vs 销售 柱状(同轴: 都是金额)
     charts.pvs = echarts.init(document.getElementById('chartPvs'));
@@ -832,6 +823,8 @@ async function loadOverview() {
       ]
     });
 
+    if (!pvs.length) { charts.pvs.clear(); charts.pvs.setOption(EMPTY_CHART('暂无数据')); }
+
     // 3 商品 TOP5 条形
     charts.top = echarts.init(document.getElementById('chartTop'));
     charts.top.setOption({
@@ -843,6 +836,8 @@ async function loadOverview() {
         itemStyle: { borderRadius: [0,6,6,0], color: new echarts.graphic.LinearGradient(0,0,1,0,[
           { offset: 0, color: 'rgba(79,124,255,.25)' }, { offset: 1, color: '#4f7cff' }]) } }]
     });
+
+    if (!top.length) { charts.top.clear(); charts.top.setOption(EMPTY_CHART('暂无销售数据')); }
 
     // 4 库存分类环形
     charts.cat = echarts.init(document.getElementById('chartCat'));
@@ -858,6 +853,7 @@ async function loadOverview() {
         data: cat.map((c, i) => ({ name: c.name || '未分类', value: c.stock, itemStyle: { color: catColors[i % catColors.length] } }))
       }]
     });
+    if (!cat.length) { charts.cat.clear(); charts.cat.setOption(EMPTY_CHART('暂无库存数据')); }
   } catch (e) { toast('总览加载失败: ' + friendlyError(e), 'err'); }
 }
 
