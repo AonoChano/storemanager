@@ -20,6 +20,14 @@
     </script>
 
     <style>
+        /* ===== 登录页布局变量(集中管理: 改这里, CSS/JS 同时生效) ===== */
+        :root {
+            --login-square-max: 100dvh;   /* 左侧方形最大边长 = 视口高 */
+            --login-square-min: 62vw;     /* 窄屏收缩下限 */
+            --login-form-w: 400px;        /* 右侧表单内容最大宽度 */
+            --login-form-pad: clamp(28px, 4vw, 64px);  /* 右侧面板内边距 */
+        }
+
         /* ===== 登录页私有 token(共享部分见 theme.css) ===== */
         :root {
             --texture-vignette: rgba(139, 126, 102, 0.08);
@@ -77,10 +85,10 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            /* 左半画布区使用自定义光标(由 JS 挂载); 右半档案卡恢复系统光标 */
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: stretch;
+            /* 左半画布区使用自定义光标(由 JS 挂载); 右半登录面板恢复系统光标 */
             cursor: none;
         }
 
@@ -108,15 +116,20 @@
             transition: background 0.3s ease;
         }
 
-        /* 右侧登录栏：伪装成档案登记卡 */
+        /* 左半方形区域: 占位载体, 边长 = 视口高(窄屏收缩), 与 canvas 布局一致 */
+        .login-square {
+            width: min(var(--login-square-max), var(--login-square-min));
+            aspect-ratio: 1;
+        }
+
+        /* 右侧登录面板: 弹性占满 视口宽-左方形, 表单内容居中限宽 */
         .archive-card {
             position: relative;
             z-index: 10;
-            width: 380px;
-            height: 100vh;
-            margin-left: auto;
+            width: auto;
+            min-width: 0;
             background-color: var(--surface);
-            padding: 4rem 3rem;
+            padding: 4rem var(--login-form-pad);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -125,6 +138,13 @@
             border-left: 1px solid var(--border);
             cursor: auto;
             transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        /* 表单内容: 居中, 最大宽度由 --login-form-w 控制(宽屏不散, 窄屏自适应) */
+        .archive-card > * {
+            width: 100%;
+            max-width: var(--login-form-w);
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .card-header {
@@ -362,8 +382,11 @@
         <span>✎ 在左侧手绘文字上移动鼠标触发物理挤压与墨水抖动效果</span>
     </div>
 
-    <!-- 兼具背景测绘图与手绘弹力字体的画布 -->
+    <!-- 兼具背景测绘图与手绘弹力字体的画布(全屏铺底) -->
     <canvas id="vintage-canvas"></canvas>
+
+    <!-- 左半方形区域占位(grid 左列载体, 透明; 边长由 --login-square-* 控制) -->
+    <div class="login-square" aria-hidden="true"></div>
 
     <!-- 右侧档案卡 (StoreManager 登录) -->
     <div class="archive-card">
@@ -401,6 +424,20 @@
 <script>
     const canvas = document.getElementById('vintage-canvas');
     const ctx = canvas.getContext('2d');
+
+    // 布局: 左方形边长从 CSS 变量读取(dvh/vw/px 均可解析), 改 --login-square-* 即全局生效
+    function loginSquare() {
+        const cs = getComputedStyle(document.documentElement);
+        const px = v => {
+            const t = String(v).trim();
+            if (t.endsWith('dvh')) return window.innerHeight * (parseFloat(t) / 100);
+            if (t.endsWith('vw')) return window.innerWidth * (parseFloat(t) / 100);
+            return parseFloat(t) || 0;
+        };
+        const max = px(cs.getPropertyValue('--login-square-max')) || window.innerHeight;
+        const min = px(cs.getPropertyValue('--login-square-min')) || window.innerWidth * 0.62;
+        return Math.max(0, Math.min(max, min));
+    }
 
     // 字号固定为最大, 弹性固定为最小(原概念稿的控制栏已移除)
     const FONT_SIZE = 140;
@@ -727,7 +764,8 @@
         ctx.font = `700 ${fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
 
         const isMobile = window.innerWidth <= 900;
-        const leftAreaWidth = isMobile ? window.innerWidth : (window.innerWidth - 380);
+        // 左方形区实际边长(与 CSS --login-square-* 一致, 不依赖硬编码)
+        const leftAreaWidth = isMobile ? window.innerWidth : loginSquare();
         const centerX = leftAreaWidth / 2;
         const centerY = window.innerHeight / 2;
         const lineHeight = fontSize * 1.15;
@@ -893,7 +931,8 @@
     // 光标跟随: 仅在左半画布区显示, 右半档案卡(表单)用系统光标
     function updateCursor(x, y) {
         if (!cursorReady) return;
-        const overCard = x > window.innerWidth - 380;
+        const cardRect = document.querySelector('.archive-card').getBoundingClientRect();
+        const overCard = x >= cardRect.left;
         cursorEl.classList.toggle('hidden', overCard);
         if (!overCard) {
             // 热点对齐: 光标图片左上角第一个非透明像素对准鼠标位置
