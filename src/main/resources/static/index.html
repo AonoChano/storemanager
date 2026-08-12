@@ -55,7 +55,7 @@
     border: 1px solid rgba(148,163,184,.3);
     color: var(--accent);
   }
-  .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em; color: #dfe6f7; }
+  .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em; color: var(--text); }
   .brand .sub { font-size: 11px; color: var(--faint); margin-top: 1px; }
   .session { display: flex; align-items: center; gap: 14px; }
   /* 顶栏主题切换(单按钮轮询: 亮色 -> 暗色 -> 跟随系统) */
@@ -949,7 +949,7 @@ async function loadOverview() {
     // 1 日销趋势折线
     charts.trend = echarts.init(document.getElementById('chartTrend'));
     charts.trend.setOption({
-      tooltip: { trigger: 'axis', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: cssVar('--text') } },
       grid: { left: 44, right: 16, top: 20, bottom: 26 },
       xAxis: { type: 'category', data: trend.map(t => t.day), ...axis },
       yAxis: { type: 'value', ...split },
@@ -967,7 +967,7 @@ async function loadOverview() {
     // 2 采购 vs 销售 柱状(同轴: 都是金额)
     charts.pvs = echarts.init(document.getElementById('chartPvs'));
     charts.pvs.setOption({
-      tooltip: { trigger: 'axis', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: cssVar('--text') } },
       legend: { data: ['采购', '销售'], textStyle: { color: cssVar('--dim') }, top: 0 },
       grid: { left: 44, right: 16, top: 34, bottom: 26 },
       xAxis: { type: 'category', data: pvs.map(p => p.day), ...axis },
@@ -985,7 +985,7 @@ async function loadOverview() {
     // 3 商品 TOP5 条形
     charts.top = echarts.init(document.getElementById('chartTop'));
     charts.top.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: cssVar('--text') } },
       grid: { left: 60, right: 30, top: 10, bottom: 24 },
       xAxis: { type: 'value', ...split },
       yAxis: { type: 'category', data: top.map(t => t.name).reverse(), ...axis },
@@ -1000,7 +1000,7 @@ async function loadOverview() {
     charts.cat = echarts.init(document.getElementById('chartCat'));
     const catColors = [cssVar('--accent'), cssVar('--ok'), cssVar('--warn'), cssVar('--err'), cssVar('--dim'), cssVar('--faint')];
     charts.cat.setOption({
-      tooltip: { trigger: 'item', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'item', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: cssVar('--text') } },
       legend: { orient: 'vertical', right: 6, top: 'center', textStyle: { color: cssVar('--dim') }, itemWidth: 10, itemHeight: 10 },
       color: catColors,
       series: [{
