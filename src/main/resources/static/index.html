@@ -441,8 +441,15 @@
     background: none; border: none; border-radius: 0; padding: 0 2px;
     font-size: 14px; line-height: 1.7; white-space: normal; word-break: break-word;
   }
-  .chat-msg.bot p { margin: 0 0 8px; }
+  .chat-msg.bot p { margin: 0 0 6px; }
   .chat-msg.bot p:last-child { margin-bottom: 0; }
+  .chat-msg.bot p:has(.chat-tool-chip) { margin: 2px 0; }   /* 工具调用行彼此紧凑 */
+  .chat-msg.bot h2, .chat-msg.bot h3, .chat-msg.bot h4 {
+    margin: 12px 0 6px; line-height: 1.35; font-weight: 600;
+  }
+  .chat-msg.bot h2 { font-size: 15.5px; }
+  .chat-msg.bot h3 { font-size: 14.5px; }
+  .chat-msg.bot h4 { font-size: 13.5px; }
 
   /* AI 消息操作栏: 赞/踩/复制/重新生成 */
   .chat-actions { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
@@ -507,7 +514,7 @@
   /* 工具调用行(设计稿"搜索结果"行同款: 无框无底色, 小图标 + 灰色下划线文字, 单行防溢出) */
   .chat-tool-chip {
     display: inline-flex; align-items: center; gap: 7px;
-    margin: 6px 0; padding: 0;
+    margin: 3px 0; padding: 0;
     border: none; background: none;
     font-size: 12px; color: var(--faint);
     max-width: 100%;
@@ -522,7 +529,7 @@
   }
 
   /* Markdown 水平分割线 */
-  .chat-msg.bot hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .chat-msg.bot hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
   /* Markdown 内容 */
   .chat-msg.bot pre {
@@ -541,8 +548,8 @@
   .chat-msg.bot pre .code-copy:hover { color: var(--text); background: var(--th-bg); }
   .chat-msg.bot pre .code-copy.copied { color: var(--ok); opacity: 1; }
   .chat-msg.bot code { font-family: Consolas, Monaco, "Courier New", monospace; background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
-  .chat-msg.bot ul, .chat-msg.bot ol { margin: 6px 0; padding-left: 20px; }
-  .chat-msg.bot li { margin: 3px 0; }
+  .chat-msg.bot ul, .chat-msg.bot ol { margin: 2px 0 6px; padding-left: 18px; }
+  .chat-msg.bot li { margin: 2px 0; }
   .chat-msg.bot table { border-collapse: collapse; margin: 8px 0; font-size: 12.5px; }
   .chat-msg.bot th, .chat-msg.bot td { border: 1px solid var(--border); padding: 5px 9px; }
   .chat-msg.bot th { background: var(--th-bg); }
@@ -1843,39 +1850,84 @@ const TOOL_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" s
 // 轻量 Markdown 渲染(先安全转义再处理常用语法)
 function renderMarkdown(text) {
   if (!text) return '';
-  let html = String(text)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-  html = html.replace(/```([\s\S]*?)```/g, (m, code) => '<pre><code>' + code.trim() + '</code></pre>');
-  html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-  html = html.replace(/((?:\|.+(?:\r?\n|$))+)/g, (m) => {
-    const rows = m.trim().split(/\r?\n/).filter(r => r.trim().startsWith('|'));
-    if (rows.length < 2) return m;
-    let t = '<table>';
-    rows.forEach((r, i) => {
-      const cells = r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
-      if (cells.every(c => /^:?-{2,}:?$/.test(c))) return;
-      t += '<tr>' + cells.map(c => (i === 0 ? '<th>' : '<td>') + c + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>';
-    });
-    return t + '</table>';
-  });
-  // 工具标记 → 芯片(在转义之后处理, 标记本身不含转义字符)
-  html = html.replace(TOOL_MARK_RE, function (m, n) {
-    return toolChipHtml(n);
-  });
-  // 标题/列表兼容无空格写法(模型常输出 "##查询说明" "-在库商品" "1.**飞机杯**")
-  html = html.replace(/^###\s*(.*)$/gm, '<h4>$1</h4>');
-  html = html.replace(/^##\s*(.*)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^#\s*(.*)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^\s*---\s*$/gm, '<hr>');  // 水平分割线
-  html = html.replace(/^\s*[-*]\s*(.*)$/gm, '<li>$1</li>');
-  html = html.replace(/^\s*\d+[.、]\s*(.*)$/gm, '<li>$1</li>');
-  html = html.replace(/(?:<li>.*<\/li>\n?)+/g, m => '<ul>' + m.trim() + '</ul>');
-  html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-  html = html.replace(/(<pre>[\s\S]*?<\/pre>)|(\r?\n)/g, (m, pre) => pre || '<br>');
-  return html;
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // 行内语法 + 工具标记芯片(标记不含转义字符, 在转义后处理)
+  const inline = s => s
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(TOOL_MARK_RE, function (m, n) { return toolChipHtml(n); });
+
+  // 行级状态机: 按块(段落/列表/表格/代码)组装结构化 HTML, 避免全局正则互相干扰
+  const lines = String(text).split(/\r?\n/);
+  const out = [];
+  let inCode = false, codeBuf = [];
+  let list = null, para = [], table = [];
+
+  const flushList = () => { if (list) { out.push('<' + list.tag + '>' + list.items.join('') + '</' + list.tag + '>'); list = null; } };
+  const flushPara = () => { if (para.length) { out.push('<p>' + para.map(l => inline(esc(l))).join('<br>') + '</p>'); para = []; } };
+  const flushTable = () => {
+    if (!table.length) return;
+    const rows = table.filter(r => !r.trim().replace(/^\||\|$/g, '').split('|').every(c => /^\s*:?-{2,}:?\s*$/.test(c.trim())));
+    if (rows.length >= 2) {
+      let t = '<table>';
+      rows.forEach((r, i) => {
+        const cells = r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        t += '<tr>' + cells.map(c => (i === 0 ? '<th>' : '<td>') + inline(esc(c)) + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>';
+      });
+      out.push(t + '</table>');
+    } else {
+      table.forEach(l => para.push(l));
+      flushPara();
+    }
+    table = [];
+  };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    // 代码块开关
+    if (/^```/.test(line.trim())) {
+      if (inCode) { out.push('<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>'); codeBuf = []; }
+      else { flushList(); flushPara(); flushTable(); }
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) { codeBuf.push(raw); continue; }
+
+    const t = line.trim();
+    if (!t) { flushList(); flushPara(); flushTable(); continue; }   // 空行 = 块分隔
+
+    if (t.startsWith('|')) { flushList(); flushPara(); table.push(line); continue; }   // 表格行
+
+    let m;
+    // 标题(兼容无空格: ##查询说明)
+    if ((m = t.match(/^###\s*(.*)$/))) { flushList(); flushPara(); flushTable(); out.push('<h4>' + inline(esc(m[1])) + '</h4>'); continue; }
+    if ((m = t.match(/^##\s*(.*)$/))) { flushList(); flushPara(); flushTable(); out.push('<h3>' + inline(esc(m[1])) + '</h3>'); continue; }
+    if ((m = t.match(/^#\s*(.*)$/))) { flushList(); flushPara(); flushTable(); out.push('<h2>' + inline(esc(m[1])) + '</h2>'); continue; }
+    if (/^\s*-{3,}\s*$/.test(t)) { flushList(); flushPara(); flushTable(); out.push('<hr>'); continue; }   // 水平分割线
+
+    // 无序列表(兼容无空格: -在库商品 / -**加粗项**; 仅排除 ** 与 -- 开头的行)
+    if ((m = t.match(/^-(?!-)\s*(.*)$/)) || (m = t.match(/^\*(?!\*)\s*(.*)$/))) {
+      flushPara(); flushTable();
+      if (!list || list.tag !== 'ul') { flushList(); list = { tag: 'ul', items: [] }; }
+      list.items.push('<li>' + inline(esc(m[1])) + '</li>');
+      continue;
+    }
+    // 有序列表(1-2位序号, 兼容无空格: 1.**飞机杯**; 避免把金额行"3,998.00"误判成列表)
+    if ((m = t.match(/^[0-9]{1,2}[.、]\s*(.*)$/))) {
+      flushPara(); flushTable();
+      if (!list || list.tag !== 'ol') { flushList(); list = { tag: 'ol', items: [] }; }
+      list.items.push('<li>' + inline(esc(m[1])) + '</li>');
+      continue;
+    }
+
+    flushList(); flushTable();
+    para.push(line);
+  }
+  flushList(); flushPara(); flushTable();
+  if (inCode && codeBuf.length) out.push('<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>');
+  return out.join('');
 }
 
 function toggleChat() {
