@@ -1088,6 +1088,7 @@ function fmtChatTime() {
 // 追加消息; opts.typing=思考中占位, opts.error=失败(带重试)
 // 复制按钮: 图标显示, 复制成功原地变勾 1.5s 后恢复
 function addCopyButton(meta, text, opts) {
+  opts = opts || {};
   const btn = document.createElement('button');
   btn.className = 'copy-btn';
   btn.title = '复制';
