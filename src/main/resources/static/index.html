@@ -170,6 +170,14 @@
   .batch-import summary:hover { color: var(--text); }
   .batch-import textarea { width: 100%; min-height: 90px; margin-top: 10px; font-family: Consolas, Monaco, monospace; font-size: 12.5px; resize: vertical; }
   .batch-import .entry-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  /* 单据头(表头字段区) */
+  .entry-head { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; max-width: 720px; }
+  .entry-head .field { display: flex; flex-direction: column; gap: 4px; }
+  .entry-head .field label { font-size: 12px; color: var(--dim); }
+  .entry-head .field input, .entry-head .field select { width: 100%; }
+  .field-inline { display: flex; gap: 8px; }
+  .field-inline input { flex: 1; }
+
   /* ===== 采购/销售单据明细 ===== */
   .entry-table { min-width: 520px; }
   .entry-table input { width: 100%; min-width: 0; }
@@ -370,6 +378,7 @@
   .chat-msg.bot .meta { margin-top: 8px; }
   .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
   .chat-input-row input { flex: 1; }
+  .chat-input-row textarea { flex: 1; resize: none; min-height: 38px; max-height: 130px; line-height: 1.55; padding: 9px 12px; overflow-y: auto; font-family: inherit; white-space: pre-wrap; word-break: break-word; }
   /* 发送按钮: 小飞机, 生成中变停止方块 */
   .chat-send { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; flex-shrink: 0; }
   .chat-send svg { display: block; }
@@ -568,9 +577,18 @@
           <span id="purchaseMsg"></span>
         </div>
         <div class="form">
-          <div class="form-row">
-            <label>供应商</label><select id="poSupplier"></select>
-            <label>新供应商</label><input id="poNewSupplier" placeholder="名称（可选）"><button class="btn ghost" onclick="addSupplier()">添加</button>
+          <div class="entry-head">
+            <div class="field">
+              <label>供应商（搜索 / 选择）</label>
+              <input id="poSupplierInput" list="poSupplierList" placeholder="输入名称搜索..." autocomplete="off">
+              <datalist id="poSupplierList"></datalist>
+            </div>
+            <div class="field">
+              <label>新供应商（可选）</label>
+              <div class="field-inline">
+                <input id="poNewSupplier" placeholder="名称"><button class="btn ghost" onclick="addSupplier()">添加</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="table-wrap">
@@ -598,8 +616,11 @@
           <span id="saleMsg"></span>
         </div>
         <div class="form">
-          <div class="form-row">
-            <label>客户名称</label><input id="soCustomer" placeholder="客户名称">
+          <div class="entry-head">
+            <div class="field">
+              <label>客户名称</label>
+              <input id="soCustomer" placeholder="输入客户名称" autocomplete="off">
+            </div>
           </div>
         </div>
         <div class="table-wrap">
@@ -687,7 +708,7 @@
   <div class="chat-head"><span>智能客服</span><div style="display:flex;gap:2px"><button class="chat-clear" id="chatClearBtn" onclick="clearChat()" title="新对话" aria-label="新对话" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></button><button class="chat-close" onclick="toggleChat()" aria-label="收起"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button></div></div>
   <div class="chat-body" id="chatBody"></div>
   <div class="chat-input-row">
-    <input id="chatInput" placeholder="问点进销存的事..." onkeydown="if(event.key==='Enter')sendChat()">
+    <textarea id="chatInput" rows="1" placeholder="问点进销存的事...（Enter 发送 / Shift+Enter 换行）"></textarea>
     <button class="btn chat-send" id="chatSendBtn" onclick="toggleSend()" title="发送" aria-label="发送"></button>
   </div>
 </div>
@@ -830,10 +851,19 @@ async function loadCategories() {
   document.getElementById('pCategory').innerHTML =
     data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 }
+// 供应商数据(供搜索匹配/记忆恢复)
+let suppliers = [];
 async function loadSuppliers() {
-  const data = await get('/supplier/list');
-  document.getElementById('poSupplier').innerHTML =
-    data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  suppliers = await get('/supplier/list');
+  document.getElementById('poSupplierList').innerHTML =
+    suppliers.map(s => `<option value="${s.name}">`).join('');
+}
+// 按名称取供应商 id(搜索输入/记忆恢复用)
+function supplierIdByName(name) {
+  const n = (name || '').trim();
+  if (!n) return null;
+  const hit = suppliers.find(s => s.name === n);
+  return hit ? hit.id : null;
 }
 async function addSupplier() {
   const name = v('poNewSupplier');
@@ -902,19 +932,19 @@ document.getElementById('pBarcode').addEventListener('input', () => {
 });
 
 // 供应商/客户记忆: 记住上次选择
-document.getElementById('poSupplier').addEventListener('change', e => {
-  if (e.target.value) localStorage.setItem('sm_last_supplier', e.target.value);
+document.getElementById('poSupplierInput').addEventListener('change', e => {
+  if (supplierIdByName(e.target.value)) localStorage.setItem('sm_last_supplier', e.target.value.trim());
 });
 document.getElementById('soCustomer').addEventListener('change', () => {
   const val = v('soCustomer');
   if (val) localStorage.setItem('sm_last_customer', val);
 });
-// loadSuppliers 后恢复上次供应商, 销售页恢复上次客户
+// loadSuppliers 后恢复上次供应商(按名称), 销售页恢复上次客户
 const _origLoadSuppliers = loadSuppliers;
 loadSuppliers = async function () {
   await _origLoadSuppliers();
   const last = localStorage.getItem('sm_last_supplier');
-  if (last) { const sel = document.getElementById('poSupplier'); sel.value = last; }
+  if (last && supplierIdByName(last)) document.getElementById('poSupplierInput').value = last;
 };
 const _lastCust = localStorage.getItem('sm_last_customer');
 if (_lastCust) { document.getElementById('soCustomer').value = _lastCust; }
@@ -1056,8 +1086,8 @@ function collectDetails(prefix) {
 }
 
 async function doPurchase() {
-  const supplierId = num('poSupplier');
-  if (!supplierId) return toast('请先添加/选择供应商', 'err');
+  const supplierId = supplierIdByName(v('poSupplierInput'));
+  if (!supplierId) return toast('请选择供应商（可先添加）', 'err');
   const details = collectDetails('po');
   if (!details.length) return toast('请扫码或搜索添加商品', 'err');
   try {
@@ -1258,6 +1288,19 @@ async function loadOverview() {
 
 // 回车登录
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// 客服输入框: Enter 发送, Shift+Enter 换行, 输入自动增高
+(function () {
+  const ta = document.getElementById('chatInput');
+  function autoGrow() {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 130) + 'px';
+  }
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+  ta.addEventListener('input', autoGrow);
+})();
 
 // ========== 主题切换: 单按钮轮询 亮色 -> 暗色 -> 跟随系统 ==========
 // 偏好存 localStorage['storemanager_theme'], 与登录页共用(一处切换两页同步)
@@ -1476,6 +1519,7 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text || chatAbort) return;
   input.value = '';
+  input.style.height = 'auto';  // 发送后重置高度
   appendMsg(text, 'user');
   const typingEl = appendMsg('', 'bot', { typing: true });
   let full = '';
