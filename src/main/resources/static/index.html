@@ -286,13 +286,26 @@
   .chat-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .chat-quick button { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--dim); font-size: 12px; padding: 5px 10px; border-radius: 999px; cursor: pointer; transition: all .15s; font-family: inherit; }
   .chat-quick button:hover { color: var(--text); border-color: var(--blue); }
-  /* 消息元信息: 时间/复制/重试 */
+  /* 消息元信息: 时间/复制(图标, 成功变勾)/重试 */
   .chat-msg .meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 10.5px; color: var(--faint); }
-  .chat-msg .copy-btn { background: none; border: none; color: var(--faint); cursor: pointer; padding: 0; font-size: 11px; display: none; font-family: inherit; }
-  .chat-msg:hover .copy-btn { display: inline; }
+  .chat-msg .copy-btn { background: none; border: none; color: var(--faint); cursor: pointer; padding: 0; display: none; line-height: 1; }
+  .chat-msg:hover .copy-btn { display: inline-flex; }
   .chat-msg .copy-btn:hover { color: var(--blue); }
+  .chat-msg .copy-btn.copied { color: var(--green); }
   .chat-msg .retry-btn { background: none; border: 1px solid var(--border); color: var(--dim); font-size: 11px; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-family: inherit; }
   .chat-msg .retry-btn:hover { color: var(--text); border-color: var(--red); }
+  /* AI 回答的 Markdown 排版 */
+  .chat-msg pre { background: rgba(0,0,0,.35); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; overflow-x: auto; font-size: 12px; line-height: 1.55; margin: 6px 0; }
+  .chat-msg code { font-family: Consolas, Monaco, "Courier New", monospace; background: rgba(0,0,0,.3); border-radius: 3px; padding: 1px 4px; font-size: 12px; }
+  .chat-msg pre code { background: none; padding: 0; }
+  .chat-msg ul, .chat-msg ol { margin: 4px 0; padding-left: 18px; }
+  .chat-msg li { margin: 2px 0; }
+  .chat-msg table { border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+  .chat-msg th, .chat-msg td { border: 1px solid var(--border); padding: 4px 8px; }
+  .chat-msg th { background: rgba(255,255,255,.04); }
+  .chat-msg a { color: var(--blue); }
+  .chat-msg h2, .chat-msg h3, .chat-msg h4 { margin: 8px 0 4px; font-size: 14px; }
+  .chat-msg br { content: ""; display: block; margin: 2px 0; }
   /* 思考中三点动画 */
   .chat-msg.typing .dots { display: inline-flex; gap: 3px; padding: 4px 0; }
   .chat-msg.typing .dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); animation: chatBlink 1.2s infinite; }
@@ -568,7 +581,7 @@
 <!-- 客服窗口 -->
 <div id="chatFab" onclick="toggleChat()" title="进销存客服"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1"/></svg></div>
 <div id="chatPanel" style="display:none">
-  <div class="chat-head"><span>智能客服</span><div style="display:flex;gap:2px"><button class="chat-clear" onclick="clearChat()" title="清空对话" aria-label="清空对话"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3h6v3"/></svg></button><button class="chat-close" onclick="toggleChat()" aria-label="关闭"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button></div></div>
+  <div class="chat-head"><span>智能客服</span><div style="display:flex;gap:2px"><button class="chat-clear" onclick="clearChat()" title="新对话" aria-label="新对话"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></button><button class="chat-close" onclick="toggleChat()" aria-label="关闭"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button></div></div>
   <div class="chat-body" id="chatBody"></div>
   <div class="chat-input-row">
     <input id="chatInput" placeholder="问点进销存的事..." onkeydown="if(event.key==='Enter')sendChat()">
@@ -988,6 +1001,51 @@ const QUICK_QUESTIONS = [
   '怎么看今天的销售情况？'
 ];
 
+// Tabler 图标
+const COPY_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"/><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2"/></svg>';
+const CHECK_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>';
+
+// 轻量 Markdown 渲染: 先安全转义再处理常用语法
+// 支持: 代码块/行内代码/表格/标题/无序有序列表/粗体/斜体/链接/换行
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = String(text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  // 代码块(整体提取, 内部不做换行/粗体等处理)
+  html = html.replace(/```([\s\S]*?)```/g, (m, code) => '<pre><code>' + code.trim() + '</code></pre>');
+  // 行内代码
+  html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  // 表格
+  html = html.replace(/((?:\|.+(?:\r?\n|$))+)/g, (m) => {
+    const rows = m.trim().split(/\r?\n/).filter(r => r.trim().startsWith('|'));
+    if (rows.length < 2) return m;
+    let t = '<table>';
+    rows.forEach((r, i) => {
+      const cells = r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      if (cells.every(c => /^:?-{2,}:?$/.test(c))) return; // 分隔行
+      t += '<tr>' + cells.map(c => (i === 0 ? '<th>' : '<td>') + c + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>';
+    });
+    return t + '</table>';
+  });
+  // 标题
+  html = html.replace(/^### (.*)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.*)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^# (.*)$/gm, '<h2>$1</h2>');
+  // 列表(先转 li, 再合并连续 li 成 ul)
+  html = html.replace(/^\s*[-*] (.*)$/gm, '<li>$1</li>');
+  html = html.replace(/^\s*\d+[.、] (.*)$/gm, '<li>$1</li>');
+  html = html.replace(/(?:<li>.*<\/li>\n?)+/g, m => '<ul>' + m.trim() + '</ul>');
+  // 粗体/斜体(先粗后斜, 避免交错)
+  html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  // 链接
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // 换行(pre 内保留原样)
+  html = html.replace(/(<pre>[\s\S]*?<\/pre>)|(\r?\n)/g, (m, pre) => pre || '<br>');
+  return html;
+}
+
 function toggleChat() {
   const p = document.getElementById('chatPanel');
   const show = p.style.display === 'none' || p.style.display === '';
@@ -1028,6 +1086,36 @@ function fmtChatTime() {
 }
 
 // 追加消息; opts.typing=思考中占位, opts.error=失败(带重试)
+// 复制按钮: 图标显示, 复制成功原地变勾 1.5s 后恢复
+function addCopyButton(meta, text, opts) {
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.title = '复制';
+  btn.innerHTML = COPY_ICON;
+  btn.onclick = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerHTML = CHECK_ICON;
+      btn.classList.add('copied');
+      btn.title = '已复制';
+      setTimeout(() => { btn.innerHTML = COPY_ICON; btn.classList.remove('copied'); btn.title = '复制'; }, 1500);
+    }).catch(() => {});
+  };
+  meta.appendChild(btn);
+  if (opts.error) {
+    const retry = document.createElement('button');
+    retry.className = 'retry-btn';
+    retry.textContent = '重试';
+    retry.onclick = () => {
+      const lastUser = [...chatHistory].reverse().find(h => h.role === 'user');
+      const input = document.getElementById('chatInput');
+      input.value = lastUser ? lastUser.content : text;
+      opts.errorEl.remove();
+      sendChat();
+    };
+    meta.appendChild(retry);
+  }
+}
+
 function appendMsg(text, who, opts) {
   opts = opts || {};
   const body = document.getElementById('chatBody');
@@ -1043,24 +1131,7 @@ function appendMsg(text, who, opts) {
     const meta = document.createElement('div');
     meta.className = 'meta';
     meta.innerHTML = '<span>' + fmtChatTime() + '</span>';
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.textContent = '复制';
-    copyBtn.onclick = () => { navigator.clipboard.writeText(text).then(() => toast('已复制', 'ok')).catch(() => {}); };
-    meta.appendChild(copyBtn);
-    if (opts.error) {
-      const retry = document.createElement('button');
-      retry.className = 'retry-btn';
-      retry.textContent = '重试';
-      retry.onclick = () => {
-        const lastUser = [...chatHistory].reverse().find(h => h.role === 'user');
-        const input = document.getElementById('chatInput');
-        input.value = lastUser ? lastUser.content : text;
-        div.remove();
-        sendChat();
-      };
-      meta.appendChild(retry);
-    }
+    addCopyButton(meta, text, opts);
     div.appendChild(meta);
   }
   body.appendChild(div);
@@ -1103,36 +1174,32 @@ async function sendChat() {
         if (data.startsWith('[ERROR]')) throw new Error(data.slice(7));
         full += data;
         typingEl.classList.remove('typing');
-        typingEl.textContent = full;
+        typingEl.innerHTML = renderMarkdown(full);
         body.scrollTop = body.scrollHeight;
       }
     }
     if (!full) throw new Error('AI 没有返回内容');
-    // 完成: 附加时间/复制
+    // 完成: 附加时间/复制按钮
     const meta = document.createElement('div');
     meta.className = 'meta';
     meta.innerHTML = '<span>' + fmtChatTime() + '</span>';
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.textContent = '复制';
-    copyBtn.onclick = () => { navigator.clipboard.writeText(full).then(() => toast('已复制', 'ok')).catch(() => {}); };
-    meta.appendChild(copyBtn);
+    addCopyButton(meta, full);
     typingEl.appendChild(meta);
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: full });
   } catch (e) {
     typingEl.remove();
-    appendMsg('出错了: ' + friendlyError(e), 'bot', { error: true });
+    appendMsg('出错了: ' + friendlyError(e), 'bot', { error: true, errorEl: typingEl });
   }
   body.scrollTop = body.scrollHeight;
 }
 
-// 清空对话
+// 新对话(清空历史, 回到引导)
 function clearChat() {
   chatHistory.length = 0;
   document.getElementById('chatBody').innerHTML = '';
   renderWelcome();
-  toast('已清空对话', 'info');
+  toast('已开启新对话', 'info');
 }
 </script>
 </body>
