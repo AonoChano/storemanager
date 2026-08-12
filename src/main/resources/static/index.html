@@ -223,7 +223,10 @@
   /* ===== 采购/销售单据明细 ===== */
   .entry-table { min-width: 520px; }
   .entry-table input { width: 100%; min-width: 0; }
-  .entry-sel { min-width: 200px; }
+  /* 商品选择列: flex 布局避免 input 100% + ···按钮 超出 td 与数量列重叠 */
+  .entry-sel { min-width: 200px; display: flex; align-items: center; gap: 6px; }
+  .entry-sel .entry-search { flex: 1; width: 0; min-width: 0; }
+  .entry-sel .picker-btn { flex-shrink: 0; }
   .entry-search.matched { border-color: var(--ok); color: var(--ok); font-weight: 600; }
   .entry-search.entry-err, .entry-qty.entry-err { border-color: var(--err); box-shadow: 0 0 0 2px rgba(184, 58, 58, .15); }
   .entry-subtotal { font-variant-numeric: tabular-nums; color: var(--dim); white-space: nowrap; }
@@ -730,15 +733,8 @@
         <div class="form">
           <div class="entry-head">
             <div class="field">
-              <label>供应商（搜索 / 选择）</label>
-              <input id="poSupplierInput" list="poSupplierList" placeholder="输入名称搜索..." autocomplete="off">
-              <datalist id="poSupplierList"></datalist>
-            </div>
-            <div class="field">
-              <label>新供应商（可选）</label>
-              <div class="field-inline">
-                <input id="poNewSupplier" placeholder="名称"><button class="btn ghost" onclick="addSupplier()">添加</button>
-              </div>
+              <label>供应商（点击选择 / 新建）</label>
+              <input id="poSupplierInput" placeholder="点击选择供应商..." autocomplete="off" readonly>
             </div>
           </div>
         </div>
@@ -863,6 +859,23 @@
     </div>
     <div class="picker-list" id="pickerList"></div>
     <div class="picker-foot"><span id="pickerCount"></span></div>
+  </div>
+</div>
+
+<!-- 供应商选择弹窗(采购单头部选供应商 + 新建合并) -->
+<div class="modal" id="supplierPicker" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 style="font-size:14px;white-space:nowrap;">选择供应商</h3>
+      <input id="supplierSearch" placeholder="搜索供应商名称..." autocomplete="off">
+      <button class="chat-close" onclick="closeSupplierPicker()" aria-label="关闭"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="picker-list" id="supplierList"></div>
+    <div class="picker-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span id="supplierCount" style="flex:1;"></span>
+      <input id="supplierNewName" placeholder="新供应商名称" style="flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);font-size:13px;outline:none;">
+      <button class="btn ghost" onclick="addSupplierInPicker()">新建</button>
+    </div>
   </div>
 </div>
 
@@ -1035,29 +1048,83 @@ async function loadCategories() {
   document.getElementById('pCategory').innerHTML =
     data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 }
-// 供应商数据(供搜索匹配/记忆恢复)
+// 供应商数据(供弹窗列表/匹配/记忆恢复)
 let suppliers = [];
 async function loadSuppliers() {
   suppliers = await get('/supplier/list');
-  document.getElementById('poSupplierList').innerHTML =
-    suppliers.map(s => `<option value="${s.name}">`).join('');
+  renderSupplierList('');
 }
-// 按名称取供应商 id(搜索输入/记忆恢复用)
+// 按名称取供应商 id(记忆恢复/提交校验用)
 function supplierIdByName(name) {
   const n = (name || '').trim();
   if (!n) return null;
   const hit = suppliers.find(s => s.name === n);
   return hit ? hit.id : null;
 }
-async function addSupplier() {
-  const name = v('poNewSupplier');
+
+// ========== 供应商选择弹窗(点击输入框打开, 新建合并在此) ==========
+function openSupplierPicker() {
+  document.getElementById('supplierSearch').value = '';
+  document.getElementById('supplierNewName').value = '';
+  document.getElementById('supplierPicker').hidden = false;
+  renderSupplierList('');
+  document.getElementById('supplierSearch').focus();
+}
+
+function closeSupplierPicker() {
+  document.getElementById('supplierPicker').hidden = true;
+}
+
+function renderSupplierList(filter) {
+  const kw = (filter || '').trim().toLowerCase();
+  const list = document.getElementById('supplierList');
+  const items = suppliers.filter(s => !kw || (s.name || '').toLowerCase().includes(kw));
+  if (!items.length) {
+    list.innerHTML = '<div class="picker-empty">没有匹配的供应商</div>';
+    document.getElementById('supplierCount').textContent = '0 个供应商';
+    return;
+  }
+  list.innerHTML = items.map(s => `
+    <div class="picker-row" onclick="pickSupplier(${s.id})">
+      <span class="p-name">${kw ? s.name.replace(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<b>$1</b>') : s.name}</span>
+      <span class="p-meta">ID ${s.id}</span>
+    </div>`).join('');
+  document.getElementById('supplierCount').textContent = items.length + ' 个供应商';
+}
+
+function pickSupplier(id) {
+  const s = suppliers.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('poSupplierInput').value = s.name;
+  localStorage.setItem('sm_last_supplier', s.name);
+  closeSupplierPicker();
+}
+
+// 弹窗内新建供应商: 成功后立即选中并回填
+async function addSupplierInPicker() {
+  const name = v('supplierNewName');
   if (!name) return toast('请输入供应商名称', 'err');
   try {
-    await post('/supplier/add', { name });
+    const r = await post('/supplier/add', { name });
     toast('供应商添加成功', 'ok');
     await loadSuppliers();
+    const hit = suppliers.find(s => s.name === name);
+    if (hit) pickSupplier(hit.id); else renderSupplierList('');
   } catch (e) { toast('添加失败: ' + friendlyError(e), 'err'); }
 }
+
+// 弹窗内搜索实时过滤 + Enter 选第一个 + Esc 关闭
+document.getElementById('supplierSearch').addEventListener('input', e => renderSupplierList(e.target.value));
+document.getElementById('supplierSearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const first = document.querySelector('#supplierList .picker-row');
+    if (first) first.click();
+  } else if (e.key === 'Escape') { closeSupplierPicker(); }
+});
+document.getElementById('supplierNewName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addSupplierInPicker(); }
+});
 
 // ========== 商品 ==========
 async function loadProducts() {
@@ -1116,9 +1183,9 @@ document.getElementById('pBarcode').addEventListener('input', () => {
 });
 
 // 供应商/客户记忆: 记住上次选择
-document.getElementById('poSupplierInput').addEventListener('change', e => {
-  if (supplierIdByName(e.target.value)) localStorage.setItem('sm_last_supplier', e.target.value.trim());
-});
+// 供应商: 点击输入框打开选择弹窗(选择/新建合并), 输入框只读
+document.getElementById('poSupplierInput').addEventListener('click', openSupplierPicker);
+document.getElementById('poSupplierInput').addEventListener('focus', openSupplierPicker);
 document.getElementById('soCustomer').addEventListener('change', () => {
   const val = v('soCustomer');
   if (val) localStorage.setItem('sm_last_customer', val);
