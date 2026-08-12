@@ -155,6 +155,18 @@
   .form-row > input, .form-row > select { flex: 1; min-width: 0; }
   .form-row .btn { flex-shrink: 0; }
   .form-actions { display: flex; gap: 10px; padding-left: 134px; }
+  /* ===== 采购/销售单据明细 ===== */
+  .entry-table { min-width: 520px; }
+  .entry-table input { width: 100%; min-width: 0; }
+  .entry-sel { min-width: 200px; }
+  .entry-search.matched { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+  .entry-search.entry-err, .entry-qty.entry-err { border-color: var(--err); box-shadow: 0 0 0 2px rgba(184, 58, 58, .15); }
+  .entry-subtotal { font-variant-numeric: tabular-nums; color: var(--dim); white-space: nowrap; }
+  .entry-del { padding: 3px 9px; line-height: 1; }
+  .entry-summary { display: flex; align-items: center; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+  .entry-summary .entry-actions { margin-left: auto; display: flex; gap: 8px; }
+  .entry-count, .entry-total { font-size: 13px; color: var(--dim); }
+  .entry-total b { color: var(--text); font-size: 15px; }
   .hint { margin-top: 15px; font-size: 12px; color: var(--faint); text-align: center; }
 
   /* ===== KPI(无盒子, 竖线分隔) ===== */
@@ -522,7 +534,7 @@
       </div>
     </div>
 
-    <!-- 采购 -->
+    <!-- 采购(单据模式: 表头 + 多商品明细, 支持扫码) -->
     <div class="panel" id="panel-purchase">
       <div class="card">
         <div class="card-head">
@@ -530,17 +542,29 @@
           <span id="purchaseMsg"></span>
         </div>
         <div class="form">
-          <div class="form-row"><label>供应商</label><select id="poSupplier"></select></div>
-          <div class="form-row"><label>新供应商</label><input id="poNewSupplier" placeholder="供应商名（可选）"><button class="btn ghost" onclick="addSupplier()">添加供应商</button></div>
-          <div class="form-row"><label>商品</label><select id="poProduct"></select></div>
-          <div class="form-row"><label>数量</label><input id="poQty" placeholder="数量" type="number" value="10"></div>
-          <div class="form-row"><label>进价</label><input id="poPrice" placeholder="自动带出" type="number" step="0.01"></div>
-          <div class="form-actions"><button class="btn" onclick="doPurchase()">采购入库</button></div>
+          <div class="form-row">
+            <label>供应商</label><select id="poSupplier"></select>
+            <label>新供应商</label><input id="poNewSupplier" placeholder="名称（可选）"><button class="btn ghost" onclick="addSupplier()">添加</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="entry-table">
+            <thead><tr><th>商品（扫码 / 条码 / 名称）</th><th>数量</th><th>进价</th><th>小计</th><th></th></tr></thead>
+            <tbody id="poDetailBody"></tbody>
+          </table>
+        </div>
+        <div class="entry-summary">
+          <span class="entry-count">共 <b id="poCount">0</b> 种</span>
+          <span class="entry-total">合计 <b id="poTotal">¥0.00</b></span>
+          <div class="entry-actions">
+            <button class="btn ghost" onclick="addEntryRow('po')">+ 添加一行</button>
+            <button class="btn" onclick="doPurchase()">采购入库</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 销售 -->
+    <!-- 销售(单据模式: 客户 + 多商品明细, 支持扫码) -->
     <div class="panel" id="panel-sale">
       <div class="card">
         <div class="card-head">
@@ -548,11 +572,23 @@
           <span id="saleMsg"></span>
         </div>
         <div class="form">
-          <div class="form-row"><label>客户名称</label><input id="soCustomer" placeholder="客户名称"></div>
-          <div class="form-row"><label>商品</label><select id="soProduct"></select></div>
-          <div class="form-row"><label>数量</label><input id="soQty" placeholder="数量" type="number" value="1"></div>
-          <div class="form-row"><label>售价</label><input id="soPrice" placeholder="自动带出" type="number" step="0.01"></div>
-          <div class="form-actions"><button class="btn" onclick="doSale()">销售出库</button></div>
+          <div class="form-row">
+            <label>客户名称</label><input id="soCustomer" placeholder="客户名称">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="entry-table">
+            <thead><tr><th>商品（扫码 / 条码 / 名称）</th><th>数量</th><th>售价</th><th>小计</th><th></th></tr></thead>
+            <tbody id="soDetailBody"></tbody>
+          </table>
+        </div>
+        <div class="entry-summary">
+          <span class="entry-count">共 <b id="soCount">0</b> 种</span>
+          <span class="entry-total">合计 <b id="soTotal">¥0.00</b></span>
+          <div class="entry-actions">
+            <button class="btn ghost" onclick="addEntryRow('so')">+ 添加一行</button>
+            <button class="btn" onclick="doSale()">销售出库</button>
+          </div>
         </div>
       </div>
     </div>
@@ -804,18 +840,9 @@ async function loadProducts() {
   } catch (e) { msg('productMsg', '加载失败: ' + friendlyError(e), true); }
 }
 async function loadProductOptions() {
-  const data = await get('/product/list');
-  const po = document.getElementById('poProduct');
-  const so = document.getElementById('soProduct');
-  const html = data.map(p => `<option value="${p.id}" data-purchase="${p.purchasePrice}" data-sale="${p.salePrice}">${p.name} (库存${p.stock})</option>`).join('');
-  po.innerHTML = html; so.innerHTML = html;
-  syncPrice();
-}
-function syncPrice() {
-  const po = document.getElementById('poProduct').selectedOptions[0];
-  const so = document.getElementById('soProduct').selectedOptions[0];
-  document.getElementById('poPrice').value = po ? po.dataset.purchase : '';
-  document.getElementById('soPrice').value = so ? so.dataset.sale : '';
+  // 商品数据源加载后, 初始化采购/销售单据首行(扫码/搜索直接输入)
+  if (products.length && !document.querySelector('#poDetailBody .entry-row')) addEntryRow('po');
+  if (products.length && !document.querySelector('#soDetailBody .entry-row')) addEntryRow('so');
 }
 async function addProduct() {
   const body = { name: v('pName'), barcode: v('pBarcode'), categoryId: num('pCategory'),
@@ -830,27 +857,146 @@ async function addProduct() {
 }
 
 // ========== 采购 / 销售 ==========
+// ========== 采购/销售单据(多商品明细 + 扫码流水线) ==========
+function addEntryRow(prefix) {
+  const body = document.getElementById(prefix + 'DetailBody');
+  const kind = prefix === 'po' ? 'purchase' : 'sale';
+  const tr = document.createElement('tr');
+  tr.className = 'entry-row';
+  tr.innerHTML = `
+    <td class="entry-sel">
+      <input class="entry-search" placeholder="扫码 / 条码 / 名称" autocomplete="off">
+      <input type="hidden" class="entry-pid">
+    </td>
+    <td><input class="entry-qty" type="number" min="1" value="1"></td>
+    <td><input class="entry-price" type="number" min="0" step="0.01"></td>
+    <td class="entry-subtotal">¥0.00</td>
+    <td><button class="btn ghost entry-del" title="删除该行">×</button></td>`;
+  const search = tr.querySelector('.entry-search');
+  search.addEventListener('keydown', e => onSearchKeydown(e, prefix, tr));
+  tr.querySelectorAll('.entry-qty, .entry-price').forEach(inp => {
+    inp.addEventListener('input', () => updateEntryRow(tr, prefix));
+    inp.addEventListener('focus', () => inp.select());  // 聚焦全选, 直接覆盖输入
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const next = tr.nextElementSibling;
+        if (next) next.querySelector('.entry-search').focus();
+        else addEntryRow(prefix);
+      }
+    });
+  });
+  tr.querySelector('.entry-del').addEventListener('click', () => { tr.remove(); updateEntryTotals(prefix); });
+  body.appendChild(tr);
+  search.focus();
+}
+
+// 商品匹配: 条码精确 > 名称包含(取首个)
+function findProduct(value) {
+  const v = value.trim();
+  if (!v) return null;
+  return products.find(p => p.barcode === v) || products.find(p => p.name.includes(v)) || null;
+}
+
+// 扫码/搜索回车: 匹配 -> 填充行 -> 自动追加新行(流水线)
+function onSearchKeydown(e, prefix, tr) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const input = e.target;
+  const p = findProduct(input.value);
+  if (!p) {
+    input.classList.add('entry-err');
+    setTimeout(() => input.classList.remove('entry-err'), 1500);
+    toast('未找到商品: ' + input.value, 'err');
+    return;
+  }
+  const kind = prefix === 'po' ? 'purchase' : 'sale';
+  input.value = p.name + ' (' + (p.barcode || '无条码') + ')';
+  input.classList.add('matched');
+  input.disabled = true;
+  tr.querySelector('.entry-pid').value = p.id;
+  tr.querySelector('.entry-price').value = kind === 'purchase' ? p.purchasePrice : p.salePrice;
+  tr.querySelector('.entry-qty').focus();
+  updateEntryRow(tr, prefix);
+  addEntryRow(prefix);  // 扫码流水线: 自动开下一行
+}
+
+function updateEntryRow(tr, prefix) {
+  const qty = Number(tr.querySelector('.entry-qty').value) || 0;
+  const price = Number(tr.querySelector('.entry-price').value) || 0;
+  tr.querySelector('.entry-subtotal').textContent = '¥' + (qty * price).toFixed(2);
+  // 销售: 数量超库存即时标红
+  if (prefix === 'so') {
+    const pid = Number(tr.querySelector('.entry-pid').value);
+    const p = products.find(x => x.id === pid);
+    const q = tr.querySelector('.entry-qty');
+    if (p && qty > p.stock) q.classList.add('entry-err');
+    else q.classList.remove('entry-err');
+  }
+  updateEntryTotals(prefix);
+}
+
+function updateEntryTotals(prefix) {
+  const rows = document.querySelectorAll('#' + prefix + 'DetailBody .entry-row');
+  let count = 0, total = 0;
+  rows.forEach(tr => {
+    if (!tr.querySelector('.entry-pid').value) return;
+    count++;
+    total += Number(tr.querySelector('.entry-subtotal').textContent.replace('¥', '')) || 0;
+  });
+  document.getElementById(prefix + 'Count').textContent = count;
+  document.getElementById(prefix + 'Total').textContent = '¥' + total.toFixed(2);
+}
+
+function collectDetails(prefix) {
+  const details = [];
+  document.querySelectorAll('#' + prefix + 'DetailBody .entry-row').forEach(tr => {
+    const pid = Number(tr.querySelector('.entry-pid').value);
+    const qty = Number(tr.querySelector('.entry-qty').value);
+    const price = Number(tr.querySelector('.entry-price').value);
+    if (pid && qty > 0) details.push({ productId: pid, quantity: qty, price: price || 0 });
+  });
+  return details;
+}
+
 async function doPurchase() {
-  const body = { supplierId: num('poSupplier'),
-    details: [{ productId: num('poProduct'), quantity: num('poQty'), price: num('poPrice') }] };
-  if (!body.supplierId) return toast('请先添加/选择供应商', 'err');
-  if (!body.details[0].productId) return toast('请选择商品', 'err');
+  const supplierId = num('poSupplier');
+  if (!supplierId) return toast('请先添加/选择供应商', 'err');
+  const details = collectDetails('po');
+  if (!details.length) return toast('请扫码或搜索添加商品', 'err');
   try {
-    await post('/purchaseOrder/create', body);
+    await post('/purchaseOrder/create', { supplierId, details });
     toast('采购入库成功', 'ok');
+    document.getElementById('poDetailBody').innerHTML = '';
+    addEntryRow('po');
     loadProducts(); loadProductOptions(); loadRecords(); loadOverview();
   } catch (e) { msg('purchaseMsg', '采购失败: ' + friendlyError(e), true); }
 }
+
 async function doSale() {
-  const body = { customerName: v('soCustomer'),
-    details: [{ productId: num('soProduct'), quantity: num('soQty'), price: num('soPrice') }] };
-  if (!body.details[0].productId) return toast('请选择商品', 'err');
+  const customerName = v('soCustomer');
+  const details = collectDetails('so');
+  if (!details.length) return toast('请扫码或搜索添加商品', 'err');
+  // 库存校验: 提交前再查一遍
+  const over = document.querySelectorAll('#soDetailBody .entry-qty.entry-err');
+  if (over.length) return toast('有商品数量超过库存，请检查', 'err');
   try {
-    await post('/saleOrder/sale', body);
+    await post('/saleOrder/sale', { customerName, details });
     toast('销售出库成功', 'ok');
+    document.getElementById('soDetailBody').innerHTML = '';
+    addEntryRow('so');
     loadProducts(); loadProductOptions(); loadRecords(); loadOverview();
   } catch (e) { msg('saleMsg', '销售失败: ' + friendlyError(e), true); }
 }
+
+// Ctrl+Enter 全局提交当前单据
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    const active = document.querySelector('.panel.active');
+    if (active && active.id === 'panel-purchase') doPurchase();
+    else if (active && active.id === 'panel-sale') doSale();
+  }
+});
 
 // ========== 流水 ==========
 async function loadRecords() {
@@ -1014,9 +1160,6 @@ async function loadOverview() {
   } catch (e) { toast('总览加载失败: ' + friendlyError(e), 'err'); }
 }
 
-// 选择商品自动带出价格
-document.getElementById('poProduct').addEventListener('change', syncPrice);
-document.getElementById('soProduct').addEventListener('change', syncPrice);
 // 回车登录
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
