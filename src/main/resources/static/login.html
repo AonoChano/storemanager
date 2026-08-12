@@ -896,6 +896,9 @@
     const CURSOR_SIZE = 32;
     const cursorEl = document.getElementById('customCursor');
     let cursorReady = false;
+    // 热点(有效点击点): 图片左上角第一个非透明像素
+    let cursorHotX = 0;
+    let cursorHotY = 0;
 
     (function loadCustomCursor() {
         const img = new Image();
@@ -907,10 +910,25 @@
             const c = document.createElement('canvas');
             c.width = w;
             c.height = h;
-            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            const cctx = c.getContext('2d', { willReadFrequently: true });
+            cctx.drawImage(img, 0, 0, w, h);
             cursorEl.style.width = w + 'px';
             cursorEl.style.height = h + 'px';
             cursorEl.style.backgroundImage = `url(${c.toDataURL('image/png')})`;
+            // 扫描左上角第一个非透明像素作为热点(alpha > 8 忽略抗锯齿边缘)
+            try {
+                const px = cctx.getImageData(0, 0, w, h).data;
+                outer:
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        if (px[(y * w + x) * 4 + 3] > 8) {
+                            cursorHotX = x;
+                            cursorHotY = y;
+                            break outer;
+                        }
+                    }
+                }
+            } catch (e) { /* 跨域等异常时保持默认热点 */ }
             cursorEl.classList.add('ready');
             cursorReady = true;
             // 触摸设备不启用自定义光标
@@ -928,7 +946,9 @@
         const overCard = x > window.innerWidth - 380;
         cursorEl.classList.toggle('hidden', overCard);
         if (!overCard) {
-            cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+            // 热点对齐: 光标图片左上角第一个非透明像素对准鼠标位置
+            cursorEl.style.transform =
+                `translate3d(${x}px, ${y}px, 0) translate(${-cursorHotX}px, ${-cursorHotY}px)`;
         }
     }
 
