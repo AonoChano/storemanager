@@ -14,6 +14,10 @@ import java.util.Map;
 @Service
 public class ChatService {
 
+    // 流式返回的一块: reasoning=思考链增量(可空), content=正文增量(可空)
+    // 思考链与正文在流中交替出现: 思考阶段 content 为空, 思考完 reasoning 为空
+    public record ChatChunk(String reasoning, String content) {}
+
     // 明显跑题的关键词(黑名单, 第①层硬拦截): 命中直接拒绝, 不调AI
     // 换成黑名单的好处: 正常的进销存问题不管怎么问都能过, 只挡明显不相关的
     private static final String[] OFF_TOPIC_KEYWORDS = {
@@ -60,10 +64,11 @@ public class ChatService {
 
     // 客服入口(流式+多轮): 前端带最近对话历史, AI 能指代"刚才说的"
     // history 格式: [{role:"user"|"assistant", content:"..."}]
-    public Flux<String> streamChat(String message, List<Map<String, String>> history, String userName) {
+    // 返回: 每块含 thinking(思考链) 与 content(正文), 二者可能其一为空
+    public Flux<ChatChunk> streamChat(String message, List<Map<String, String>> history, String userName) {
         // ① 硬拦截(不调AI)
         if (isOffTopic(message)) {
-            return Flux.just("我只能回答进销存相关的问题，比如采购、销售、库存、报表等。");
+            return Flux.just(new ChatChunk(null, "我只能回答进销存相关的问题，比如采购、销售、库存、报表等。"));
         }
 
         // ② 组装多轮历史(截断到最后 20 条, 控制 token)
@@ -87,12 +92,22 @@ public class ChatService {
             sys = SYSTEM_PROMPT + "\n当前登录用户是" + userName + "，回答时可以用'您'称呼。";
         }
 
-        // ④ 流式调用
+        // ④ 流式调用: 逐块取出 思考链(DeepSeekAssistantMessage.reasoningContent) + 正文
         return chatClient.prompt()
                 .system(sys)
                 .messages(messages)
                 .stream()
-                .content();
+                .chatResponse()
+                .map(resp -> {
+                    String reasoning = null;
+                    org.springframework.ai.chat.messages.AssistantMessage out =
+                            resp.getResult() != null ? resp.getResult().getOutput() : null;
+                    // DeepSeek 模块把思考链存在自定义消息类里(非 metadata)
+                    if (out instanceof org.springframework.ai.deepseek.DeepSeekAssistantMessage dsm) {
+                        reasoning = dsm.getReasoningContent();
+                    }
+                    return new ChatChunk(reasoning, out != null ? out.getText() : null);
+                });
     }
 
     // 判断问题是否含"明显跑题"关键词

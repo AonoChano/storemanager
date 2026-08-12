@@ -51,9 +51,14 @@ public class ChatController {
 
         chatService.streamChat(message, history, userName).subscribe(
                 chunk -> {
-                    // 临时调试: 观察流式 chunk 中换行符是否存在(\n 转义为 \\n 显示)
-                    System.out.println("[CHAT-CHUNK] " + chunk.replace("\n", "\\n"));
-                    sendSafe(emitter, chunk);
+                    // 思考链增量: [THINK] 前缀, 前端渲染折叠的思考过程块
+                    if (chunk.reasoning() != null && !chunk.reasoning().isEmpty()) {
+                        sendSafe(emitter, "[THINK]" + chunk.reasoning());
+                    }
+                    // 正文增量: 无前缀, 前端打字机渲染
+                    if (chunk.content() != null && !chunk.content().isEmpty()) {
+                        sendSafe(emitter, chunk.content());
+                    }
                 },
                 error -> {
                     sendSafe(emitter, "[ERROR]" + error.getMessage());
