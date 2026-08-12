@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 本地配置(含密钥, 不提交) ###
+# 真实配置不入库, 模板见 src/main/resources/application-example.properties
+src/main/resources/application.properties

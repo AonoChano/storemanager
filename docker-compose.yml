@@ -1,0 +1,37 @@
+# 进销存系统依赖栈: MySQL + Redis
+# 用法: docker compose up -d   (首次会自动导入 sql/schema.sql 建表)
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: storemanager-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"     # 与 application.properties 一致
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql                 # 数据持久化, 容器重建不丢数据
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro   # 首次启动自动建库建表
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: storemanager-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

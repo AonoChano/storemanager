@@ -211,6 +211,6 @@ INSERT INTO `role` (`role_name`, `description`) VALUES
 
 -- 默认管理员: admin / 123456 (BCrypt加密)
 INSERT INTO `user` (`username`, `password`, `real_name`, `role_id`, `status`) VALUES
-('admin', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', '系统管理员', 1, 1);
+('admin', '$2b$12$QnSu6JiHVNNcoO.khWp9ceR8X/MiCIkCKw9uA2WFWhURq.Sj5QzDa', '系统管理员', 1, 1);
 
 INSERT INTO `category` (`name`) VALUES ('饮料'), ('零食'), ('日用品'), ('生鲜');
