@@ -48,9 +48,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            /* 左半画布区使用自定义光标(由 JS 挂载); 右半档案卡恢复系统光标 */
+            cursor: none;
         }
 
-        /* 动画与交互画布 */
+        /* 动画与交互画布: 左半区系统光标隐形(自定义光标接管) */
         #vintage-canvas {
             position: absolute;
             top: 0;
@@ -58,7 +60,7 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            cursor: pointer;
+            cursor: none;
         }
 
         /* Ambient Lighting Gradient Overlay */
@@ -88,6 +90,7 @@
             box-shadow: -15px 0 40px var(--shadow-color),
                         -1px 0 0 rgba(255,255,255,0.6) inset;
             border-left: 1px solid var(--border-amber);
+            cursor: auto;
         }
 
         .card-header {
@@ -193,6 +196,9 @@
             position: absolute;
             bottom: 20px;
             left: 28px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
             font-family: 'Space Mono', monospace;
             font-size: 0.7rem;
             color: var(--ink-light);
@@ -200,6 +206,51 @@
             opacity: 0.6;
             z-index: 10;
         }
+
+        /* 音效开关(纯图标喇叭, 适应复古档案风格) */
+        .btn-sound {
+            pointer-events: auto;
+            background: transparent;
+            border: 1px dashed var(--ink-light);
+            color: var(--ink-dark);
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border-radius: 3px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: all 0.2s;
+        }
+
+        .btn-sound svg { display: block; }
+
+        .btn-sound .icon-off { display: none; }
+        .btn-sound.active .icon-on { display: none; }
+        .btn-sound.active .icon-off { display: block; }
+
+        .btn-sound:hover {
+            border-color: var(--ink-dark);
+        }
+
+        .btn-sound.active {
+            border-style: solid;
+            border-color: var(--ink-dark);
+        }
+
+        /* 自定义光标(占位: cursor/cursor.png, 加载后自动等比压缩) */
+        #customCursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999;
+            pointer-events: none;
+            display: none;
+            background: no-repeat center / contain;
+        }
+
+        #customCursor.ready { display: block; }
+        #customCursor.hidden { display: none; }
 
         @media (max-width: 900px) {
             .archive-card {
@@ -215,7 +266,20 @@
 <div id="desktop-container">
     <div class="ambient-lighting"></div>
 
-    <div class="hint-text">✎ 在左侧手绘文字上移动鼠标触发物理挤压与墨水抖动效果</div>
+    <div class="hint-text">
+        <button class="btn-sound active" id="soundBtn" type="button" title="音效: 开" aria-label="音效开关">
+            <svg class="icon-on" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 6v4h2.5L8 13V3L4.5 6H2z"/>
+                <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5"/>
+                <path d="M12.5 3.5a6.5 6.5 0 0 1 0 9"/>
+            </svg>
+            <svg class="icon-off" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 6v4h2.5L8 13V3L4.5 6H2z"/>
+                <path d="M10.5 5.5l3 5M13.5 5.5l-3 5"/>
+            </svg>
+        </button>
+        <span>✎ 在左侧手绘文字上移动鼠标触发物理挤压与墨水抖动效果</span>
+    </div>
 
     <!-- 兼具背景测绘图与手绘弹力字体的画布 -->
     <canvas id="vintage-canvas"></canvas>
@@ -250,6 +314,9 @@
     </div>
 </div>
 
+<!-- 自定义光标(图片放 static/cursor/cursor.png, 加载后自动等比压缩到 32px) -->
+<div id="customCursor"></div>
+
 <script>
     const canvas = document.getElementById('vintage-canvas');
     const ctx = canvas.getContext('2d');
@@ -266,6 +333,52 @@
     let edges = [];
     let time = 0;
     let frame = 0;
+    // 音效默认开启
+    let soundEnabled = true;
+
+    // Web Audio API 模拟铅笔滑动音效
+    let audioCtx = null;
+    function playScratchSound() {
+        if (!soundEnabled) return;
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        const bufferSize = audioCtx.sampleRate * 0.025;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1100 + Math.random() * 600;
+        filter.Q.value = 2.5;
+
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.025);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        noise.start();
+    }
+
+    const soundBtn = document.getElementById('soundBtn');
+    soundBtn.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        soundBtn.classList.toggle('active', soundEnabled);
+        soundBtn.title = soundEnabled ? '音效: 开' : '音效: 关';
+    });
 
     // Color definitions corresponding to parchment & dark sepia ink
     const colors = {
@@ -304,25 +417,30 @@
             const dx = mouse.x - this.x;
             const dy = mouse.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const maxDist = this.fontSize * 1.25;
+            // 判定半径: 略大于系统光标(40px), 贴近字母即可触发, 推开感明显
+            const maxDist = 40;
 
             if (dist < maxDist) {
                 const force = (1 - dist / maxDist);
                 const angle = Math.atan2(dy, dx);
 
                 // 推开力
-                const push = force * 22 * elasticityFactor;
+                const push = force * 15 * elasticityFactor;
                 this.vx -= Math.cos(angle) * push;
                 this.vy -= Math.sin(angle) * push;
 
                 // 挤压变形
-                this.vScaleX += force * 0.12 * (Math.random() > 0.5 ? 1 : -1);
-                this.vScaleY += force * 0.12 * (Math.random() > 0.5 ? 1 : -1);
+                this.vScaleX += force * 0.07 * (Math.random() > 0.5 ? 1 : -1);
+                this.vScaleY += force * 0.07 * (Math.random() > 0.5 ? 1 : -1);
 
                 // 扭转力
-                this.vRotation += (Math.random() - 0.5) * force * 0.18;
+                this.vRotation += (Math.random() - 0.5) * force * 0.11;
 
                 this.hoverAmount = Math.min(1, this.hoverAmount + 0.15);
+
+                if (mouse.speed > 2 && Math.random() < 0.3) {
+                    playScratchSound();
+                }
             } else {
                 this.hoverAmount = Math.max(0, this.hoverAmount - 0.05);
             }
@@ -599,8 +717,8 @@
         mouse.px = mouse.x;
         mouse.py = mouse.y;
 
-        // 羊皮纸微弱余晖清屏
-        ctx.fillStyle = 'rgba(244, 239, 216, 0.35)';
+        // 不透明清屏: 消除半透明拖尾残影, 视觉干净且减少混合开销
+        ctx.fillStyle = '#f4efd8';
         ctx.fillRect(0, 0, width, height);
 
         // 1. 绘制网格与底纹测绘节点
@@ -620,17 +738,61 @@
         }
     }
 
+    // ========== 自定义光标(占位 cursor/cursor.png, 加载后自动等比压缩到 32px) ==========
+    // 你设计好 PNG 后直接替换 src/main/resources/static/cursor/cursor.png 即可, 无需改代码
+    const CURSOR_PATH = 'cursor/cursor.png';
+    const CURSOR_SIZE = 32;
+    const cursorEl = document.getElementById('customCursor');
+    let cursorReady = false;
+
+    (function loadCustomCursor() {
+        const img = new Image();
+        img.onload = () => {
+            // 自动压缩: 长边压到 32px, 保持宽高比(任意分辨率原图都能用)
+            const scale = CURSOR_SIZE / Math.max(img.width, img.height);
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const c = document.createElement('canvas');
+            c.width = w;
+            c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            cursorEl.style.width = w + 'px';
+            cursorEl.style.height = h + 'px';
+            cursorEl.style.backgroundImage = `url(${c.toDataURL('image/png')})`;
+            cursorEl.classList.add('ready');
+            cursorReady = true;
+            // 触摸设备不启用自定义光标
+            if (window.matchMedia('(hover: none)').matches) {
+                cursorEl.classList.add('hidden');
+            }
+        };
+        img.onerror = () => { /* 图片缺失: 静默退回系统光标 */ };
+        img.src = CURSOR_PATH;
+    })();
+
+    // 光标跟随: 仅在左半画布区显示, 右半档案卡(表单)用系统光标
+    function updateCursor(x, y) {
+        if (!cursorReady) return;
+        const overCard = x > window.innerWidth - 380;
+        cursorEl.classList.toggle('hidden', overCard);
+        if (!overCard) {
+            cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+        }
+    }
+
     // 事件监听
     window.addEventListener('resize', resize);
 
     window.addEventListener('mousemove', (e) => {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
+        updateCursor(e.clientX, e.clientY);
     });
 
     window.addEventListener('mouseleave', () => {
         mouse.x = -9999;
         mouse.y = -9999;
+        if (cursorReady) cursorEl.classList.add('hidden');
     });
 
     // Touch Support
@@ -639,6 +801,7 @@
             mouse.x = e.touches[0].clientX;
             mouse.y = e.touches[0].clientY;
         }
+        if (cursorReady) cursorEl.classList.add('hidden');
     }, { passive: true });
 
     window.addEventListener('touchend', () => {
