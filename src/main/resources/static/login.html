@@ -28,7 +28,7 @@
             --login-form-pad: clamp(28px, 4vw, 64px);  /* 右侧面板内边距 */
         }
 
-        /* ===== 登录页私有 token(共享部分见 theme.css) ===== */
+        /* ===== 登录页私有 token: 暗黑工业风(覆盖 theme.css 同名变量, 不影响主系统) ===== */
         :root {
             --texture-vignette: rgba(139, 126, 102, 0.08);
             --texture-lines: rgba(0, 0, 0, 0.015);
@@ -36,17 +36,36 @@
             --card-inset: rgba(255, 255, 255, 0.6);
             --input-line: rgba(44, 40, 36, 0.3);
             --placeholder: rgba(92, 85, 73, 0.4);
-            --btn-hover: #1a1714;
+            /* 工业红点缀(亮色: 深红, 暗色: 亮红) */
+            --login-accent: #A63B2A;
+            --login-accent-bright: #C0392B;
+            /* 做旧羊皮纸登录按钮 */
+            --login-btn-bg: #F5F5DC;
+            --login-btn-text: #2C2824;
+            --login-btn-border: #8B3A3A;
+            --social-bg: rgba(44, 40, 36, 0.05);
+            --frame-border: rgba(44, 40, 36, 0.12);
+            --footer-bg: rgba(251, 249, 236, 0.92);
         }
 
+        /* 暗色主题: 深灰黑工业底, 面板略浅一档以区分(不融合) */
         [data-theme="dark"] {
+            --bg: #16181D;
+            --surface: #1B1E24;
             --texture-vignette: rgba(255, 255, 255, 0.03);
             --texture-lines: rgba(255, 255, 255, 0.018);
             --ambient: rgba(255, 255, 255, 0.06);
             --card-inset: rgba(255, 255, 255, 0.05);
-            --input-line: rgba(233, 231, 226, 0.28);
+            --input-line: rgba(233, 231, 226, 0.25);
             --placeholder: rgba(154, 151, 143, 0.5);
-            --btn-hover: #d8d5cc;
+            --login-accent: #E05A4E;
+            --login-accent-bright: #F07167;
+            --login-btn-bg: #F5F5DC;
+            --login-btn-text: #2C2824;
+            --login-btn-border: #8B3A3A;
+            --social-bg: rgba(255, 255, 255, 0.06);
+            --frame-border: rgba(255, 255, 255, 0.08);
+            --footer-bg: rgba(27, 30, 36, 0.92);
         }
         @font-face { font-family: 'Architects Daughter'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/architects-daughter-400.woff2) format('woff2'); }
         @font-face { font-family: 'Cabin Sketch'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/cabin-sketch-700.woff2) format('woff2'); }
@@ -71,10 +90,9 @@
             background-image:
                 radial-gradient(circle at 50% 50%, transparent 20%, var(--texture-vignette) 100%),
                 repeating-linear-gradient(45deg, transparent, transparent 2px, var(--texture-lines) 2px, var(--texture-lines) 4px);
-            font-family: 'Playfair Display', serif;
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
             font-size: 16px;
             color: var(--text);
-            /* 小字号衬线体更清晰 */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
@@ -116,6 +134,15 @@
             transition: background 0.3s ease;
         }
 
+        /* 极细外边框(工业蓝图框, 纯装饰) */
+        .page-frame {
+            position: fixed;
+            inset: 10px;
+            border: 1px solid var(--frame-border);
+            pointer-events: none;
+            z-index: 4;
+        }
+
         /* 左半方形区域: 占位载体, 边长 = 视口高(窄屏收缩), 与 canvas 布局一致 */
         .login-square {
             width: min(var(--login-square-max), var(--login-square-min));
@@ -147,62 +174,127 @@
             margin-right: auto;
         }
 
+        /* ===== 顶部标题区 ===== */
         .card-header {
-            margin-bottom: 3rem;
+            margin-bottom: 3.2rem;
             position: relative;
         }
 
         .card-header h1 {
-            font-size: 2.2rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            margin-bottom: 0.5rem;
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            margin-bottom: 0.9rem;
         }
 
         .card-header p {
             font-family: 'Space Mono', monospace;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+            font-size: 0.78rem;
+            letter-spacing: 0.14em;
             color: var(--dim);
         }
 
+        /* ===== 表单输入区: 序号标签 + 线框图标 + 下划线红菱形 ===== */
         .form-group {
-            margin-bottom: 2rem;
+            margin-bottom: 1.8rem;
             position: relative;
         }
 
         .form-group label {
-            display: block;
+            display: flex;
+            align-items: baseline;
+            gap: 0.55em;
             font-family: 'Space Mono', monospace;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--dim);
-            margin-bottom: 0.3rem;
-            letter-spacing: 0.05em;
+            margin-bottom: 0.55rem;
+            letter-spacing: 0.08em;
         }
 
-        .form-group input {
+        .form-group label .field-no {
+            color: var(--login-accent);
+            letter-spacing: 0.1em;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap input {
             width: 100%;
             background: transparent;
             border: none;
             border-bottom: 1px solid var(--input-line);
-            padding: 0.5rem 0;
-            font-family: 'Playfair Display', serif;
-            font-size: 1.15rem;
+            padding: 0.62rem 2.4rem 0.62rem 2rem;
+            font-size: 1.02rem;
             color: var(--text);
             outline: none;
-            transition: all 0.3s ease;
+            transition: border-color 0.3s ease;
         }
 
-        .form-group input:focus {
-            border-bottom-color: var(--text);
+        .input-wrap input:focus {
+            border-bottom-color: var(--login-accent);
         }
 
-        .form-group input::placeholder {
-            font-style: italic;
+        .input-wrap input::placeholder {
             color: var(--placeholder);
-            font-size: 0.95rem;
+            font-size: 0.92rem;
         }
+
+        /* 左侧线框图标 */
+        .input-icon {
+            position: absolute;
+            left: 0.15rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 17px;
+            height: 17px;
+            color: var(--dim);
+            transition: color 0.3s ease;
+            pointer-events: none;
+        }
+
+        .input-wrap:focus-within .input-icon {
+            color: var(--login-accent);
+        }
+
+        /* 下划线末端(右侧)的红色小菱形点缀 */
+        .line-dot {
+            position: absolute;
+            right: 0.15rem;
+            bottom: 0;
+            transform: translateY(50%) rotate(45deg);
+            width: 6px;
+            height: 6px;
+            background: var(--login-accent);
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .input-wrap:focus-within .line-dot {
+            transform: translateY(50%) rotate(45deg) scale(1.3);
+            box-shadow: 0 0 8px var(--login-accent);
+        }
+
+        /* 密码可见性切换(小眼睛) */
+        .eye-toggle {
+            position: absolute;
+            right: 0.1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            padding: 5px;
+            color: var(--dim);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: color 0.2s ease;
+        }
+
+        .eye-toggle:hover { color: var(--text); }
+        .eye-toggle .icon-off { display: none; }
+        .eye-toggle.shown .icon-on { display: none; }
+        .eye-toggle.shown .icon-off { display: block; }
 
         .login-error {
             font-family: 'Space Mono', monospace;
@@ -211,24 +303,106 @@
             margin-bottom: 1rem;
         }
 
+        /* ===== 记住我 + 忘记密码 ===== */
+        .options-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0.2rem 0 1.6rem;
+            font-size: 0.85rem;
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--dim);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .checkbox-box {
+            width: 15px;
+            height: 15px;
+            border: 1px solid var(--border);
+            display: grid;
+            place-items: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .remember input:checked + .checkbox-box {
+            background: var(--login-accent);
+            border-color: var(--login-accent);
+        }
+
+        .checkbox-box::after {
+            content: '';
+            width: 7px;
+            height: 4px;
+            border-left: 1.5px solid #fff;
+            border-bottom: 1.5px solid #fff;
+            transform: rotate(-45deg) translateY(-1px);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .remember input:checked + .checkbox-box::after { opacity: 1; }
+
+        .remember:hover .checkbox-box { border-color: var(--login-accent); }
+
+        .link-forgot {
+            color: var(--login-accent);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s ease;
+        }
+
+        .link-forgot:hover { color: var(--login-accent-bright); text-decoration: underline; }
+
+        /* ===== 登录按钮: 做旧羊皮纸 + 暗红细描边 + 箭头 ===== */
         .submit-btn {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: var(--text);
-            color: var(--surface);
-            border: none;
-            font-family: 'Space Mono', monospace;
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
+            width: 100%;
+            margin-top: 0.4rem;
+            padding: 0.98rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--login-btn-bg);
+            /* 微弱做旧纹理(亮点渐变) */
+            background-image: radial-gradient(ellipse at 30% 0%, rgba(255, 255, 255, 0.55), transparent 55%);
+            color: var(--login-btn-text);
+            border: 1px solid var(--login-btn-border);
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.28em;
             cursor: pointer;
             transition: all 0.2s ease;
-            position: relative;
+        }
+
+        .submit-btn .btn-arrow {
+            width: 26px;
+            height: 11px;
+            color: var(--login-btn-text);
+            transition: transform 0.2s ease, color 0.2s ease;
         }
 
         .submit-btn:hover {
-            background: var(--btn-hover);
-            transform: translateY(1px);
+            border-color: var(--login-accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:hover .btn-arrow {
+            transform: translateX(3px);
+            color: var(--login-accent);
         }
 
         .submit-btn:disabled {
@@ -236,19 +410,112 @@
             cursor: wait;
         }
 
-        .card-footer {
-            margin-top: auto;
+        /* ===== 分隔线与社交登录 ===== */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            /* 注意: margin 简写会覆盖 .archive-card > * 的左右 auto 居中, 必须保留 auto */
+            margin: 2rem auto 1.4rem;
             font-family: 'Space Mono', monospace;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            color: var(--faint);
+            white-space: nowrap;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .social-row {
+            display: flex;
+            justify-content: center;
+            gap: 1.6rem;
+        }
+
+        .social-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
             color: var(--dim);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            padding: 0;
+        }
+
+        .social-circle {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--social-bg);
+            border: 1px solid var(--border);
+            display: grid;
+            place-items: center;
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+        .social-btn:hover .social-circle {
+            border-color: var(--login-accent);
+            color: var(--login-accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .social-btn:hover { color: var(--text); }
+
+        /* ===== 底部注册入口 ===== */
+        .signup-row {
+            margin-top: 1.8rem;
             text-align: center;
-            opacity: 0.75;
+            font-size: 0.85rem;
+            color: var(--dim);
+        }
+
+        .link-register {
+            color: var(--login-accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .link-register:hover { color: var(--login-accent-bright); }
+
+        /* ===== 页面底部版权区(细横线分割, 小字低透明度) ===== */
+        .page-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2.2rem;
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            background: var(--footer-bg);
+            backdrop-filter: blur(6px);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.64rem;
+            letter-spacing: 0.06em;
+            color: var(--faint);
+            text-align: center;
             line-height: 1.5;
         }
 
         .hint-text {
             position: absolute;
-            bottom: 20px;
+            bottom: 64px;
             left: 28px;
             display: flex;
             align-items: center;
@@ -324,6 +591,28 @@
             border-color: var(--text);
         }
 
+        /* 开发中提示(社交登录占位) */
+        #toast {
+            position: fixed;
+            top: 26px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: var(--surface);
+            border: 1px solid var(--login-accent);
+            color: var(--text);
+            padding: 0.6rem 1.5rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.12em;
+            opacity: 0;
+            pointer-events: none;
+            box-shadow: 0 8px 24px var(--shadow);
+            transition: opacity 0.25s ease;
+        }
+
+        #toast.show { opacity: 1; }
+
         /* 自定义光标(占位: cursor/cursor.png, 加载后自动等比压缩) */
         #customCursor {
             position: fixed;
@@ -344,6 +633,18 @@
                 box-shadow: none;
                 background-color: var(--surface);
             }
+            .page-footer { gap: 1rem; flex-direction: column; padding: 0.5rem 1rem; }
+            .hint-text { display: none; }
+        }
+
+        /* 矮窗口: 面板内容多, 改为顶部对齐可滚动, 避免挤压裁切 */
+        @media (max-height: 760px) {
+            .archive-card {
+                justify-content: flex-start;
+                padding-top: 2.5rem;
+                overflow-y: auto;
+            }
+            .card-header { margin-bottom: 2rem; }
         }
     </style>
 </head>
@@ -351,6 +652,7 @@
 
 <div id="desktop-container">
     <div class="ambient-lighting"></div>
+    <div class="page-frame" aria-hidden="true"></div>
 
     <!-- 主题切换: 单按钮点击轮询 亮色 -> 暗色 -> 跟随系统 -->
     <button class="theme-toggle" id="themeToggle" title="主题: 跟随系统" aria-label="切换主题">
@@ -388,35 +690,123 @@
     <!-- 左半方形区域占位(grid 左列载体, 透明; 边长由 --login-square-* 控制) -->
     <div class="login-square" aria-hidden="true"></div>
 
-    <!-- 右侧档案卡 (StoreManager 登录) -->
+    <!-- 右侧登录面板 (暗黑工业风) -->
     <div class="archive-card">
         <div class="card-header">
             <h1>登录</h1>
-            <p>StoreManager 进销存管理系统</p>
+            <p>STORE MANAGER 进销存管理系统</p>
         </div>
 
         <form id="loginForm">
             <div class="form-group">
-                <label>账号</label>
-                <input type="text" id="username" placeholder="请输入账号" autocomplete="username" required>
+                <label><span class="field-no">01</span>账号</label>
+                <div class="input-wrap">
+                    <!-- 线框小人图标 -->
+                    <svg class="input-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="8" cy="5" r="3"/>
+                        <path d="M2.5 14c.8-2.6 3-4 5.5-4s4.7 1.4 5.5 4"/>
+                    </svg>
+                    <input type="text" id="username" placeholder="请输入账号" autocomplete="username" required>
+                    <span class="line-dot" aria-hidden="true"></span>
+                </div>
             </div>
 
             <div class="form-group">
-                <label>密码</label>
-                <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password" required>
+                <label><span class="field-no">02</span>密码</label>
+                <div class="input-wrap">
+                    <!-- 线框锁头图标 -->
+                    <svg class="input-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="7" width="10" height="7" rx="1"/>
+                        <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>
+                        <circle cx="8" cy="10.5" r="0.8" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password" required>
+                    <span class="line-dot" aria-hidden="true"></span>
+                    <!-- 小眼睛: 切换显示/隐藏密码 -->
+                    <button type="button" class="eye-toggle" id="eyeToggle" title="显示密码" aria-label="显示/隐藏密码">
+                        <svg class="icon-on" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1.5 8s2.6-4 6.5-4 6.5 4 6.5 4-2.6 4-6.5 4-6.5-4-6.5-4z"/>
+                            <circle cx="8" cy="8" r="1.8"/>
+                        </svg>
+                        <svg class="icon-off" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1.5 8s2.6-4 6.5-4 6.5 4 6.5 4-2.6 4-6.5 4-6.5-4-6.5-4z"/>
+                            <circle cx="8" cy="8" r="1.8"/>
+                            <path d="M2.5 2.5l11 11"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <div class="login-error" id="loginError" hidden></div>
 
-            <button type="submit" class="submit-btn" id="submitBtn">登 录</button>
+            <div class="options-row">
+                <label class="remember">
+                    <input type="checkbox" id="remember">
+                    <span class="checkbox-box"></span>
+                    <span>记住我</span>
+                </label>
+                <a href="#" class="link-forgot" id="forgotLink">忘记密码？</a>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <span>登 录</span>
+                <!-- 细长右箭头 -->
+                <svg class="btn-arrow" viewBox="0 0 26 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M0.5 5.5h23M19.5 1l4.5 4.5-4.5 4.5"/>
+                </svg>
+            </button>
         </form>
 
-        <div class="card-footer">
-            <p>进销存管理系统 · 采购 / 销售 / 库存 / 报表</p>
-            <p>默认账号 admin / 123456</p>
+        <div class="divider"><span>或使用以下方式登录</span></div>
+
+        <div class="social-row">
+            <!-- 三个社交入口均为占位: 点击弹出"开发中" -->
+            <button type="button" class="social-btn" data-name="SSO登录">
+                <span class="social-circle">
+                    <svg viewBox="0 0 16 16" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="8" cy="5.5" r="2.6"/>
+                        <path d="M2.5 14c.8-2.5 3-3.8 5.5-3.8s4.7 1.3 5.5 3.8"/>
+                    </svg>
+                </span>
+                <span class="social-label">SSO登录</span>
+            </button>
+            <button type="button" class="social-btn" data-name="企业微信">
+                <span class="social-circle">
+                    <svg viewBox="0 0 16 16" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 1.5l5.5 2.2v4c0 3.6-2.4 5.9-5.5 6.8-3.1-.9-5.5-3.2-5.5-6.8v-4L8 1.5z"/>
+                        <path d="M5.8 8.2l1.6 1.6 2.8-3"/>
+                    </svg>
+                </span>
+                <span class="social-label">企业微信</span>
+            </button>
+            <button type="button" class="social-btn" data-name="扫码登录">
+                <span class="social-circle">
+                    <svg viewBox="0 0 16 16" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="5" height="5" rx="0.8"/>
+                        <rect x="9" y="2" width="5" height="5" rx="0.8"/>
+                        <rect x="2" y="9" width="5" height="5" rx="0.8"/>
+                        <path d="M9 9h1.8v1.8H9zM11.5 11.5h1.8v1.8h-1.8zM13.5 9.5V14M9.5 13.5H14"/>
+                    </svg>
+                </span>
+                <span class="social-label">扫码登录</span>
+            </button>
+        </div>
+
+        <div class="signup-row">
+            <span>还没有账号？</span>
+            <a href="#" class="link-register" id="registerLink">立即注册 →</a>
         </div>
     </div>
 </div>
+
+<!-- 页面底部版权区(细横线分割) -->
+<footer class="page-footer">
+    <span>进销存管理系统 · 采购 / 销售 / 库存 / 报表</span>
+    <span>默认账号 admin / 123456</span>
+</footer>
+
+<!-- 开发中提示 -->
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- 自定义光标(图片放 static/cursor/cursor.png, 加载后自动等比压缩到 32px) -->
 <div id="customCursor"></div>
@@ -498,7 +888,7 @@
         soundBtn.title = soundEnabled ? '音效: 开' : '音效: 关';
     });
 
-    // 两套画布配色: 亮(羊皮纸档案) / 暗(黑白银系, 手写体白色)
+    // 两套画布配色: 亮(羊皮纸档案) / 暗(深灰黑工业底 + 白色手写体)
     const THEMES = {
         light: {
             clear: '#f4efd8',
@@ -513,16 +903,16 @@
             haloRgb: '184, 115, 36'
         },
         dark: {
-            clear: '#0d0d0f',
+            clear: '#16181D',
             grid: 'rgba(255, 255, 255, 0.05)',
             ink: 'rgba(233, 231, 226, 0.8)',
             inkLight: 'rgba(154, 151, 143, 0.3)',
-            highlight: 'rgba(192, 95, 95, 0.65)',
+            highlight: 'rgba(224, 90, 78, 0.65)',
             edgeRgb: '154, 151, 143',
             letterDraft: 'rgba(233, 231, 226, 0.38)',
             letterFill: '#f0ede6',
             letterStroke: '#b9b5ac',
-            haloRgb: '201, 160, 94'
+            haloRgb: '224, 90, 78'
         }
     };
     let colors = THEMES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
@@ -1009,6 +1399,46 @@
     });
     syncThemeToggle();
 
+    // ========== 密码可见性切换(小眼睛) ==========
+    const eyeToggle = document.getElementById('eyeToggle');
+    const pwdInput = document.getElementById('password');
+    eyeToggle.addEventListener('click', () => {
+        const show = pwdInput.type === 'password';
+        pwdInput.type = show ? 'text' : 'password';
+        eyeToggle.classList.toggle('shown', show);
+        eyeToggle.title = show ? '隐藏密码' : '显示密码';
+        pwdInput.focus();
+    });
+
+    // ========== 记住我(仅记住账号, 本地存储) ==========
+    const REMEMBER_KEY = 'storemanager_remember_user';
+    const remember = document.getElementById('remember');
+    const usernameInput = document.getElementById('username');
+    try {
+        const savedUser = localStorage.getItem(REMEMBER_KEY);
+        if (savedUser) {
+            usernameInput.value = savedUser;
+            remember.checked = true;
+        }
+    } catch (e) { /* 隐私模式等异常静默处理 */ }
+
+    // ========== 社交登录占位: 点击弹出"开发中", 2 秒后消失 ==========
+    const toast = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+    document.querySelectorAll('.social-btn').forEach(btn => {
+        btn.addEventListener('click', () => showToast('开发中'));
+    });
+
+    // 忘记密码 / 立即注册: 占位链接, 暂不跳转
+    document.getElementById('forgotLink').addEventListener('click', (e) => e.preventDefault());
+    document.getElementById('registerLink').addEventListener('click', (e) => e.preventDefault());
+
     // ========== 登录接入 ==========
     const loginForm = document.getElementById('loginForm');
     const errEl = document.getElementById('loginError');
@@ -1029,12 +1459,12 @@
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value;
+        const username = usernameInput.value.trim();
+        const password = pwdInput.value;
         if (!username || !password) { showError('请输入账号和密码'); return; }
         errEl.hidden = true;
         submitBtn.disabled = true;
-        submitBtn.textContent = '登 录中…';
+        submitBtn.querySelector('span').textContent = '登 录中…';
         try {
             const r = await fetch('/user/login', {
                 method: 'POST',
@@ -1043,13 +1473,18 @@
             });
             const j = await r.json();
             if (j.code !== 1) throw new Error(j.msg);
+            // 记住我: 勾选则记住账号, 否则清除
+            try {
+                if (remember.checked) localStorage.setItem(REMEMBER_KEY, username);
+                else localStorage.removeItem(REMEMBER_KEY);
+            } catch (err) { /* 忽略存储异常 */ }
             localStorage.setItem('storemanager_token', j.data.token);
             localStorage.setItem('storemanager_user', JSON.stringify(j.data.user));
             location.href = '/';
         } catch (err) {
             showError(friendlyLoginError(err.message));
             submitBtn.disabled = false;
-            submitBtn.textContent = '登 录';
+            submitBtn.querySelector('span').textContent = '登 录';
         }
     });
 
