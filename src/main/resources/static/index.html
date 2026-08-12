@@ -155,6 +155,21 @@
   .form-row > input, .form-row > select { flex: 1; min-width: 0; }
   .form-row .btn { flex-shrink: 0; }
   .form-actions { display: flex; gap: 10px; padding-left: 134px; }
+  /* 三列字段分组(label 上置, 行业标准布局) */
+  .form-row.cols-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .form-row.cols-3 .field { display: flex; flex-direction: column; gap: 4px; }
+  .form-row.cols-3 .field label { font-size: 12px; color: var(--dim); }
+  .form-row.cols-3 .field input, .form-row.cols-3 .field select { width: 100%; }
+  .form-row.cols-3 .field-btn { justify-content: flex-end; }
+  .field-tip { font-size: 11.5px; color: var(--faint); min-height: 14px; }
+  .field-tip.ok { color: var(--ok); }
+  .field-tip.err { color: var(--err); }
+  /* 批量导入 */
+  .batch-import { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+  .batch-import summary { cursor: pointer; font-size: 13px; color: var(--dim); user-select: none; }
+  .batch-import summary:hover { color: var(--text); }
+  .batch-import textarea { width: 100%; min-height: 90px; margin-top: 10px; font-family: Consolas, Monaco, monospace; font-size: 12.5px; resize: vertical; }
+  .batch-import .entry-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
   /* ===== 采购/销售单据明细 ===== */
   .entry-table { min-width: 520px; }
   .entry-table input { width: 100%; min-width: 0; }
@@ -521,15 +536,26 @@
         </div>
         <div class="card-head" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);"><h2>新增商品</h2></div>
         <div class="form">
-          <div class="form-row"><label>名称</label><input id="pName" placeholder="名称"></div>
-          <div class="form-row"><label>条码</label><input id="pBarcode" placeholder="条码"></div>
-          <div class="form-row"><label>分类</label><select id="pCategory"></select></div>
-          <div class="form-row"><label>规格</label><input id="pSpec" placeholder="规格"></div>
-          <div class="form-row"><label>单位</label><input id="pUnit" placeholder="单位"></div>
-          <div class="form-row"><label>进价</label><input id="pPurchase" placeholder="进价" type="number" step="0.01"></div>
-          <div class="form-row"><label>售价</label><input id="pSale" placeholder="售价" type="number" step="0.01"></div>
-          <div class="form-row"><label>预警阈值</label><input id="pWarn" placeholder="预警阈值" type="number"></div>
-          <div class="form-actions"><button class="btn" onclick="addProduct()">新增商品</button></div>
+          <div class="form-row cols-3">
+            <div class="field"><label>名称 *</label><input id="pName" placeholder="商品名称"></div>
+            <div class="field"><label>条码</label><input id="pBarcode" placeholder="扫码 / 手动输入"><span class="field-tip" id="barcodeTip"></span></div>
+            <div class="field"><label>分类</label><select id="pCategory"></select></div>
+          </div>
+          <div class="form-row cols-3">
+            <div class="field"><label>规格</label><input id="pSpec" placeholder="如 500ml"></div>
+            <div class="field"><label>单位</label><input id="pUnit" placeholder="如 瓶 / 箱"></div>
+            <div class="field"><label>预警阈值</label><input id="pWarn" placeholder="低于此值预警" type="number"></div>
+          </div>
+          <div class="form-row cols-3">
+            <div class="field"><label>进价</label><input id="pPurchase" type="number" step="0.01" placeholder="0.00"></div>
+            <div class="field"><label>售价</label><input id="pSale" type="number" step="0.01" placeholder="0.00"></div>
+            <div class="field field-btn"><label></label><button class="btn" onclick="addProduct()">新增商品</button></div>
+          </div>
+          <details class="batch-import">
+            <summary>批量导入商品（粘贴 Excel / 表格行）</summary>
+            <textarea id="batchText" placeholder="每行一个商品，Tab 或逗号分隔：&#10;可乐&#9;690001&#9;2.5&#9;3.5&#10;雪碧&#9;690002&#9;2.5&#9;3.5&#10;&#10;列顺序: 名称, 条码, 进价, 售价"></textarea>
+            <div class="entry-actions"><button class="btn" onclick="batchAdd()">批量新增</button><span class="field-tip" id="batchTip"></span></div>
+          </details>
         </div>
       </div>
     </div>
@@ -849,11 +875,81 @@ async function addProduct() {
     spec: v('pSpec'), unit: v('pUnit'), purchasePrice: num('pPurchase'), salePrice: num('pSale'),
     warningThreshold: num('pWarn') };
   if (!body.name) return toast('请填写商品名称', 'err');
+  // 条码重复校验(提交前)
+  if (body.barcode && products.some(p => p.barcode && p.barcode === body.barcode)) {
+    return toast('条码已存在: ' + body.barcode, 'err');
+  }
   try {
     await post('/product/add', body);
     msg('productMsg', '新增成功');
+    document.getElementById('pName').value = '';
+    document.getElementById('pBarcode').value = '';
+    document.getElementById('pSpec').value = '';
+    document.getElementById('pPurchase').value = '';
+    document.getElementById('pSale').value = '';
     loadProducts(); loadProductOptions();
   } catch (e) { msg('productMsg', '新增失败: ' + friendlyError(e), true); }
+}
+
+// 条码输入即时查重
+document.getElementById('pBarcode').addEventListener('input', () => {
+  const tip = document.getElementById('barcodeTip');
+  const bc = v('pBarcode');
+  if (!bc) { tip.textContent = ''; return; }
+  const dup = products.find(p => p.barcode && p.barcode === bc);
+  if (dup) { tip.textContent = '条码已存在: ' + dup.name; tip.className = 'field-tip err'; }
+  else { tip.textContent = '条码可用'; tip.className = 'field-tip ok'; }
+});
+
+// 供应商/客户记忆: 记住上次选择
+document.getElementById('poSupplier').addEventListener('change', e => {
+  if (e.target.value) localStorage.setItem('sm_last_supplier', e.target.value);
+});
+document.getElementById('soCustomer').addEventListener('change', () => {
+  const val = v('soCustomer');
+  if (val) localStorage.setItem('sm_last_customer', val);
+});
+// loadSuppliers 后恢复上次供应商, 销售页恢复上次客户
+const _origLoadSuppliers = loadSuppliers;
+loadSuppliers = async function () {
+  await _origLoadSuppliers();
+  const last = localStorage.getItem('sm_last_supplier');
+  if (last) { const sel = document.getElementById('poSupplier'); sel.value = last; }
+};
+const _lastCust = localStorage.getItem('sm_last_customer');
+if (_lastCust) { document.getElementById('soCustomer').value = _lastCust; }
+
+// ===== P2: 批量导入商品(粘贴 Excel/表格行) =====
+// 列顺序: 名称, 条码, 进价, 售价; 分隔符: Tab/逗号/中文逗号
+async function batchAdd() {
+  const text = document.getElementById('batchText').value.trim();
+  if (!text) return toast('请粘贴商品数据', 'err');
+  const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+  const items = [];
+  const errors = [];
+  rows.forEach((r, i) => {
+    const cols = r.split(/[\t,，]+/).map(c => c.trim());
+    if (cols.length < 1 || !cols[0]) { errors.push('第' + (i + 1) + '行缺少名称'); return; }
+    items.push({ name: cols[0], barcode: cols[1] || '', purchasePrice: Number(cols[2]) || 0, salePrice: Number(cols[3]) || 0 });
+  });
+  if (!items.length) return toast('没有可导入的数据', 'err');
+  const tip = document.getElementById('batchTip');
+  tip.textContent = '正在导入 ' + items.length + ' 个商品...';
+  tip.className = 'field-tip';
+  let ok = 0, fail = 0;
+  for (const it of items) {
+    try {
+      // 条码重复跳过
+      if (it.barcode && products.some(p => p.barcode && p.barcode === it.barcode)) { fail++; continue; }
+      await post('/product/add', { name: it.name, barcode: it.barcode, categoryId: null,
+        spec: '', unit: '', purchasePrice: it.purchasePrice, salePrice: it.salePrice, warningThreshold: null });
+      ok++;
+    } catch (e) { fail++; }
+  }
+  tip.textContent = '导入完成: 成功 ' + ok + ' 个' + (fail ? '，跳过/失败 ' + fail + ' 个' : '') + (errors.length ? '；' + errors.join('；') : '');
+  tip.className = 'field-tip ' + (fail || errors.length ? 'err' : 'ok');
+  document.getElementById('batchText').value = '';
+  loadProducts(); loadProductOptions();
 }
 
 // ========== 采购 / 销售 ==========
@@ -1405,9 +1501,14 @@ async function sendChat() {
       while ((idx = buffer.indexOf('\n\n')) >= 0) {
         const block = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 2);
-        const line = block.split('\n').find(l => l.startsWith('data:'));
-        if (!line) continue;
-        const data = line.slice(5).trim();
+        // SSE 规范: 事件块内多个 data: 行属于同一事件, 需全部收集并用换行拼接
+        // (后端 SseEmitter 会把含 \n 的内容拆成多行 data:, 只取第一行会丢内容丢换行)
+        const dataLines = block.split('\n')
+          .map(l => l.replace(/\r$/, ''))            // 兼容 Windows \r\n
+          .filter(l => l.startsWith('data:'))
+          .map(l => l.slice(5).replace(/^ /, ''));    // 去 "data:" + 一个可选空格, 保留其余缩进
+        if (!dataLines.length) continue;
+        const data = dataLines.join('\n');
         if (data === '[DONE]') { buffer = ''; break; }
         if (data.startsWith('[ERROR]')) throw new Error(data.slice(7));
         full += data;
