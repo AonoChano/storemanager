@@ -185,6 +185,8 @@
     display: grid; place-items: center;
     padding: 20px;
   }
+  /* 关键: hidden 属性必须能覆盖 display:grid(否则弹窗永远显示关不掉) */
+  .modal[hidden] { display: none !important; }
   .modal-box {
     width: min(520px, 94vw);
     max-height: 76vh;
