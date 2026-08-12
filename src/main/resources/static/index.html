@@ -1193,7 +1193,8 @@ async function sendChat() {
         if (data.startsWith('[ERROR]')) throw new Error(data.slice(7));
         full += data;
         typingEl.classList.remove('typing');
-        typingEl.innerHTML = renderMarkdown(full);
+        // 流式过程显示纯文本打字机, 避免未闭合 markdown 原文闪烁; 完成后统一排版
+        typingEl.textContent = full;
         body.scrollTop = body.scrollHeight;
       }
     }
