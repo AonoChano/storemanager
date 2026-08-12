@@ -4,7 +4,9 @@
 
 ## 功能演示
 
-<video src="src/docs/demo.mp4" controls width="100%"></video>
+![前端交互演示](src/docs/demo.gif)
+
+> 完整演示视频：`src/docs/demo.mp4`（GitHub 视频内联预览有限制，动图为压缩版本）
 
 ## 功能模块
 
