@@ -328,7 +328,8 @@
   .err { color: var(--err); font-size: 12.5px; }
 
   /* ===== Toast ===== */
-  #toastWrap { position: fixed; right: 22px; bottom: 22px; z-index: 100; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  /* 注意: #toastWrap 的最终定位规则在下方"Toast: 顶部居中(设计稿风格)"处, 此处只保留 .toast 样式
+     (勿再单独定义 #toastWrap 的 right/bottom, 否则与 top/left 合并会把容器拉伸成盖屏大块, 拦截全页点击) */
   .toast { display: flex; align-items: center; gap: 9px; padding: 11px 16px; border-radius: 10px; font-size: 13px;
     color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
     box-shadow: 0 6px 20px rgba(0,0,0,.35); animation: toastIn .3s cubic-bezier(.2,.8,.2,1); }
@@ -512,9 +513,14 @@
   }
 
   /* Toast: 顶部居中(设计稿风格) */
+  /* pointer-events:none + width:max-content 双保险:
+     1) 容器不拦截页面点击(曾因 left/right 拉伸成盖屏大块, 导致全页按钮点不了)
+     2) 防止 left:50% 与残留 right/bottom 合并把容器拉宽 */
   #toastWrap {
     position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
     z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center;
+    pointer-events: none;
+    width: max-content; max-width: min(92vw, 640px);
   }
   .toast {
     display: flex; align-items: center; gap: 7px;
@@ -523,6 +529,7 @@
     border: 1px solid var(--border);
     box-shadow: 0 10px 30px rgba(0,0,0,.3);
     animation: toastIn .25s cubic-bezier(.2,.8,.2,1);
+    pointer-events: auto;  /* toast 本身可交互(如需要) */
   }
   .toast.ok::before { content: "✓"; color: var(--ok); font-weight: 700; }
   .toast.err::before { content: "!"; color: var(--err); font-weight: 700; }
