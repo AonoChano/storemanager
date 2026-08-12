@@ -573,9 +573,10 @@
 
         .btn-sound svg { display: block; }
 
-        .btn-sound .icon-off { display: none; }
-        .btn-sound.active .icon-on { display: none; }
-        .btn-sound.active .icon-off { display: block; }
+        /* 音效开(active)显示声波喇叭, 关显示带叉喇叭 */
+        .btn-sound .icon-on { display: none; }
+        .btn-sound.active .icon-off { display: none; }
+        .btn-sound.active .icon-on { display: block; }
 
         .btn-sound:hover {
             border-color: var(--text);
