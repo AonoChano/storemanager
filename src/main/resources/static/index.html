@@ -830,7 +830,7 @@ async function loadReports() {
       || '<tr><td colspan="3" class="empty">暂无销售数据</td></tr>';
     const p = await get('/saleOrderDetail/profit');
     document.getElementById('profitInfo').innerHTML =
-      `销售额 <b>${p.revenue}</b> <span class="green">毛利 ${p.profit}</span>`;
+      `销售额 <b>${(p && p.revenue) || 0}</b> <span class="green">毛利 ${(p && p.profit) || 0}</span>`;
   } catch (e) {}
 }
 
@@ -888,7 +888,7 @@ async function loadOverview() {
     // 还没有任何商品时, KPI 显示占位符 -- 而不是 0
     const hasData = products.length > 0;
     renderKpi(hasData ? todaySale : null, hasData ? totalStock : null,
-      hasData ? warnCount : null, hasData ? Number(profit.profit || 0) : null);
+      hasData ? warnCount : null, hasData ? Number((profit && profit.profit) || 0) : null);
 
     const axis = { axisLine: { lineStyle: { color: 'rgba(154,163,189,.25)' } },
       axisLabel: { color: '#9aa3bd' }, axisTick: { show: false } };
