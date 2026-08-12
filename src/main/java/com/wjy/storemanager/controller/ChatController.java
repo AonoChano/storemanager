@@ -55,9 +55,11 @@ public class ChatController {
                     if (chunk.reasoning() != null && !chunk.reasoning().isEmpty()) {
                         sendSafe(emitter, "[THINK]" + chunk.reasoning());
                     }
-                    // 工具调用: [TOOL] 前缀, 前端渲染银灰工具行
+                    // 工具调用: [TOOL]工具名 或 [TOOL]工具名::参数明细, 前端渲染银灰芯片
                     if (chunk.toolName() != null && !chunk.toolName().isBlank()) {
-                        sendSafe(emitter, "[TOOL]" + chunk.toolName());
+                        String detail = chunk.toolDetail();
+                        sendSafe(emitter, "[TOOL]" + chunk.toolName()
+                                + (detail != null && !detail.isBlank() ? "::" + detail : ""));
                     }
                     // 正文增量: 无前缀, 前端打字机渲染
                     if (chunk.content() != null && !chunk.content().isEmpty()) {

@@ -498,19 +498,32 @@
     padding: 0 12px 10px 26px; color: var(--dim);
     white-space: pre-wrap; word-break: break-word; line-height: 1.6;
     border-top: 1px dashed var(--border);
+    max-height: 240px; overflow-y: auto;   /* 思考过长限高, 用户自行滚动翻阅 */
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
   }
+  .chat-think-body::-webkit-scrollbar { width: 6px; }
+  .chat-think-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  /* 工具调用行(银灰独立一行, 参考设计稿"搜索结果"行的形态) */
-  .chat-tool-wrap { margin: 0 0 10px; display: flex; flex-direction: column; gap: 4px; }
-  .chat-tool {
-    display: inline-flex; align-items: center; gap: 7px;
+  /* 工具调用芯片(正文流中 ::ToolCall:: 标记的渲染形态; 银灰: 数据库图标 + 工具名 + 参数明细) */
+  .chat-tool-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 4px 0; padding: 4px 12px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface-2);
     font-size: 12px; color: var(--dim);
+    max-width: 100%; overflow: hidden;
   }
-  .chat-tool svg { color: var(--faint); flex-shrink: 0; }
-  .chat-tool .tool-name {
+  .chat-tool-chip svg { color: var(--faint); flex-shrink: 0; }
+  .chat-tool-chip .tool-chip-label {
     text-decoration: underline;
-    text-decoration-color: var(--border-strong);
+    text-decoration-color: var(--faint);
     text-underline-offset: 3px; text-decoration-thickness: 1px;
+    white-space: nowrap;
+  }
+  .chat-tool-chip .tool-chip-detail {
+    color: var(--faint); font-family: 'Space Mono', monospace; font-size: 11px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 280px;
   }
 
   /* Markdown 水平分割线 */
@@ -1851,12 +1864,17 @@ function renderMarkdown(text) {
     });
     return t + '</table>';
   });
-  html = html.replace(/^### (.*)$/gm, '<h4>$1</h4>');
-  html = html.replace(/^## (.*)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^# (.*)$/gm, '<h2>$1</h2>');
+  // 工具标记 → 芯片(在转义之后处理, 标记本身不含转义字符)
+  html = html.replace(TOOL_MARK_RE, function (m, n, d) {
+    return toolChipHtml(n, d || '');
+  });
+  // 标题/列表兼容无空格写法(模型常输出 "##查询说明" "-在库商品" "1.**飞机杯**")
+  html = html.replace(/^###\s*(.*)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^##\s*(.*)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^#\s*(.*)$/gm, '<h2>$1</h2>');
   html = html.replace(/^\s*---\s*$/gm, '<hr>');  // 水平分割线
-  html = html.replace(/^\s*[-*] (.*)$/gm, '<li>$1</li>');
-  html = html.replace(/^\s*\d+[.、] (.*)$/gm, '<li>$1</li>');
+  html = html.replace(/^\s*[-*]\s*(.*)$/gm, '<li>$1</li>');
+  html = html.replace(/^\s*\d+[.、]\s*(.*)$/gm, '<li>$1</li>');
   html = html.replace(/(?:<li>.*<\/li>\n?)+/g, m => '<ul>' + m.trim() + '</ul>');
   html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
@@ -1964,16 +1982,9 @@ function finalizeBotMsg(el, fullText, opts) {
   opts = opts || {};
   el.classList.remove('chat-thinking', 'chat-think-live');
   el.className = 'chat-msg bot';
-  const contentEls = el.querySelectorAll('.chat-content');
-  if (contentEls.length) {
-    const splitAt = (opts.splitAt >= 0) ? opts.splitAt : -1;
-    if (splitAt >= 0 && contentEls.length >= 2) {
-      // 工具调用切割: 工具前正文 / 工具后正文 分段渲染(工具行已在两者之间, 保持中间位置)
-      contentEls[0].innerHTML = renderMarkdown(fullText.slice(0, splitAt));
-      contentEls[1].innerHTML = renderMarkdown(fullText.slice(splitAt));
-    } else {
-      contentEls[0].innerHTML = renderMarkdown(fullText);
-    }
+  const contentEl = el.querySelector('.chat-content');
+  if (contentEl) {
+    contentEl.innerHTML = renderMarkdown(fullText);
   } else {
     // 非流式路径(错误消息等): 整块渲染
     el.innerHTML = '';
@@ -2074,11 +2085,7 @@ async function sendChat() {
   let thinkLive = null;    // 思考滚筒(首次收到 [THINK] 时创建): 单行遮罩窗口, 行从下往上滚过
   let thinkPartial = '';   // 滚筒里未换行的进行中行(增量跨 chunk 拼接用)
   let thinkFinalized = false;  // 滚筒已定格为折叠块(工具调用/正文出现后, 后续思考只更新折叠内容)
-  let toolWrapEl = null;   // 工具调用行容器(首次收到 [TOOL] 时创建)
-  const toolNames = [];    // 已展示的工具名(去重)
-  let contentEl = null;        // 正文打字机容器(工具调用前/无工具时使用)
-  let bottomContentEl = null;  // 工具调用后的正文容器(插在工具行之后, 保证工具行在正文中间的正确位置)
-  let toolSplitAt = -1;        // 首次工具调用时正文已输出的长度(切割点, -1=未切割)
+  let contentEl = null;    // 正文打字机容器(首次正文/工具标记出现时创建)
   const body = document.getElementById('chatBody');
   chatAbort = new AbortController();
   setSendState(true);
@@ -2146,45 +2153,42 @@ async function sendChat() {
           continue;
         }
         if (data.startsWith('[TOOL]')) {
-          const tname = data.slice(6);
-          if (toolNames.includes(tname)) continue;
-          // 工具调用出现: 定格思考(指示器/滚筒→折叠块), 工具行容器追加在当前已输出正文之后
-          // (不清空已有内容: 工具前的正文保留在工具行上方)
-          if (!toolWrapEl) {
+          // 工具调用: 以结构化文本标记注入正文流(真实参与模型上下文, 类似 @文件 的 md 形式),
+          // 前端识别 ::ToolCall:: 标记转成银灰芯片 —— 位置即调用发生处, 实时可见
+          const payload = data.slice(6);
+          const sep = payload.indexOf('::');
+          const tname = sep >= 0 ? payload.slice(0, sep) : payload;
+          const tdetail = sep >= 0 ? payload.slice(sep + 2) : '';
+          // 正文容器尚未建立(工具先于正文): 定格思考并立即建容器, 芯片即刻出现
+          if (!contentEl) {
             finalizeThinkEl(thinkingEl, thinkFull);
             thinkLive = null;
             thinkFinalized = true;
-            toolSplitAt = full.length;   // 切割点: 工具前正文定格, 工具后正文另起容器
-            toolWrapEl = document.createElement('div');
-            toolWrapEl.className = 'chat-tool-wrap';
-            thinkingEl.appendChild(toolWrapEl);
+            contentEl = document.createElement('div');
+            contentEl.className = 'chat-content';
+            thinkingEl.appendChild(contentEl);
           }
-          toolNames.push(tname);
-          toolWrapEl.innerHTML = toolNames.map(t => toolRow(t)).join('');
+          full += '\n\n::ToolCall::' + tname + (tdetail ? '::' + tdetail : '') + '::\n\n';
+          contentEl.innerHTML = streamRender(full);
           body.scrollTop = body.scrollHeight;
           continue;
         }
-        // 正文到达: 工具切割后写次容器(位于工具行之后), 否则写主容器
-        const isPostTool = toolSplitAt >= 0;
-        let targetEl = isPostTool ? bottomContentEl : contentEl;
-        if (!targetEl) {
-          // 首段正文: 定格思考(指示器/滚筒→折叠块), 建正文容器
+        // 正文到达: 定格思考, 正文打字机(工具标记芯片随文实时渲染)
+        if (!contentEl) {
           finalizeThinkEl(thinkingEl, thinkFull);
           thinkLive = null;
           thinkFinalized = true;
-          targetEl = document.createElement('div');
-          targetEl.className = 'chat-content';
-          thinkingEl.appendChild(targetEl);
-          if (isPostTool) bottomContentEl = targetEl; else contentEl = targetEl;
+          contentEl = document.createElement('div');
+          contentEl.className = 'chat-content';
+          thinkingEl.appendChild(contentEl);
         }
         full += data;
-        // 纯文本打字机, 避免未闭合 markdown 闪烁; 切割后只渲染工具后的部分
-        targetEl.textContent = isPostTool ? full.slice(toolSplitAt) : full;
+        contentEl.innerHTML = streamRender(full);
         body.scrollTop = body.scrollHeight;
       }
     }
     if (!full) throw new Error('AI 没有返回内容');
-    finalizeBotMsg(thinkingEl, full, { think: thinkFull, splitAt: toolSplitAt });
+    finalizeBotMsg(thinkingEl, full, { think: thinkFull });
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: full });
     updateChatClearBtn();
@@ -2192,7 +2196,7 @@ async function sendChat() {
     if (e.name === 'AbortError') {
       if (!full) { thinkingEl.remove(); }
       else {
-        finalizeBotMsg(thinkingEl, full, { think: thinkFull, splitAt: toolSplitAt });
+        finalizeBotMsg(thinkingEl, full, { think: thinkFull });
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: full });
         updateChatClearBtn();
@@ -2230,9 +2234,23 @@ function finalizeThinkEl(el, thinkFull) {
   }
 }
 
-// 工具调用行(银灰: 数据库图标 + 工具名下划线, 参考设计稿"搜索结果"行的独立一行效果)
-function toolRow(name) {
-  return '<div class="chat-tool">' + TOOL_ICON + '<span>调用工具</span><span class="tool-name">' + escHtml(name) + '</span></div>';
+// 工具调用标记(注入正文流的结构化文本, 参与模型上下文; 类似 @文件 的 md 形式)
+// 格式: ::ToolCall::工具名:: 或 ::ToolCall::工具名::参数明细::
+// 前端渲染时识别该标记 → 银灰芯片; 原始文本对模型依然可读
+const TOOL_MARK_RE = /::ToolCall::([^:]+)(?:::([\s\S]*?))?::/g;
+
+// 工具调用芯片 HTML(名称/明细已经过外层转义)
+function toolChipHtml(name, detail) {
+  return '<span class="chat-tool-chip">' + TOOL_ICON +
+    '<span class="tool-chip-label">调用工具 ' + name + '</span>' +
+    (detail ? '<span class="tool-chip-detail">' + detail + '</span>' : '') + '</span>';
+}
+
+// 流式渲染: 转义正文 + 工具标记渲染成芯片(打字机阶段无 markdown, 避免未闭合语法闪烁)
+function streamRender(t) {
+  return escHtml(t).replace(TOOL_MARK_RE, function (m, n, d) {
+    return toolChipHtml(n, d || '');
+  });
 }
 
 // HTML 转义(打字机/思考链用, 避免渲染成标签)

@@ -33,7 +33,7 @@ public class InventoryTools {
     // 查商品信息: 进价/售价/库存/预警
     @Tool(description = "按商品名称查询商品信息，返回进价、售价、当前库存、单位、预警阈值。支持模糊匹配，例如'可乐'能查到可口可乐。")
     public String getProductInfo(String name) {
-        ToolNotifier.notify("getProductInfo");
+        ToolNotifier.notify("getProductInfo", "查询商品: " + name);
         List<Product> list = productMapper.selectAll(name, null, null);
         if (list.isEmpty()) return "没有找到名为「" + name + "」的商品。";
         StringBuilder sb = new StringBuilder();
@@ -50,7 +50,7 @@ public class InventoryTools {
     // 查低库存商品
     @Tool(description = "查询所有库存低于预警阈值的商品，返回低库存商品清单，用于库存预警。")
     public String getLowStockProducts() {
-        ToolNotifier.notify("getLowStockProducts");
+        ToolNotifier.notify("getLowStockProducts", null);
         List<Product> list = productMapper.selectAll(null, null, null);
         StringBuilder sb = new StringBuilder();
         int count = 0;
@@ -67,7 +67,7 @@ public class InventoryTools {
     // 查今日销售
     @Tool(description = "查询今日的销售总额。返回今天的销售金额。")
     public String getTodaySales() {
-        ToolNotifier.notify("getTodaySales");
+        ToolNotifier.notify("getTodaySales", null);
         List<TrendVo> trend = reportMapper.saleTrend();
         String today = LocalDate.now().toString();   // yyyy-MM-dd
         for (TrendVo t : trend) {
@@ -81,7 +81,7 @@ public class InventoryTools {
     // 通用只读SQL工具(Text-to-SQL): 让AI自己写SQL查任意统计, 带4把安全锁
     @Tool(description = "执行只读SQL查询(SELECT)获取业务数据并返回结果行。用于任意统计/聚合/排行/对比/多条件查询，例如'哪个商品毛利最高''按分类汇总库存''总采购额''销售Top5'。支持联表JOIN、分组GROUP BY、排序ORDER BY、LIMIT。凡是需要统计多行或整表数据的查询，必须用这个工具，不要用查单个商品的工具。")
     public String executeSql(String sql) {
-        ToolNotifier.notify("executeSql");
+        ToolNotifier.notify("executeSql", sql);
         if (sql == null || sql.trim().isEmpty()) return "SQL不能为空";
         // 去掉开头注释, 防止绕过检查
         String clean = sql.trim().replaceFirst("^(/\\*.*?\\*/|--.*|#.*)", "").trim();

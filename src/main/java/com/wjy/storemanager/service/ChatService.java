@@ -14,9 +14,9 @@ import java.util.Map;
 @Service
 public class ChatService {
 
-    // 流式返回的一块: reasoning=思考链增量(可空), content=正文增量(可空), toolName=工具调用名(可空)
+    // 流式返回的一块: reasoning=思考链增量(可空), content=正文增量(可空), toolName/toolDetail=工具调用(可空)
     // 思考链/正文/工具调用在流中交替出现: 工具调用 chunk 的 reasoning/content 均为空
-    public record ChatChunk(String reasoning, String content, String toolName) {}
+    public record ChatChunk(String reasoning, String content, String toolName, String toolDetail) {}
 
     // 明显跑题的关键词(黑名单, 第①层硬拦截): 命中直接拒绝, 不调AI
     // 换成黑名单的好处: 正常的进销存问题不管怎么问都能过, 只挡明显不相关的
@@ -68,7 +68,7 @@ public class ChatService {
     public Flux<ChatChunk> streamChat(String message, List<Map<String, String>> history, String userName) {
         // ① 硬拦截(不调AI)
         if (isOffTopic(message)) {
-            return Flux.just(new ChatChunk(null, "我只能回答进销存相关的问题，比如采购、销售、库存、报表等。", null));
+            return Flux.just(new ChatChunk(null, "我只能回答进销存相关的问题，比如采购、销售、库存、报表等。", null, null));
         }
 
         // ② 组装多轮历史(截断到最后 20 条, 控制 token)
@@ -97,7 +97,7 @@ public class ChatService {
         // 手动桥接(不用 Flux.merge): merge 会等所有源完成, 而工具事件源没有完成信号 → [DONE] 永远发不出
         reactor.core.publisher.Sinks.Many<ChatChunk> bridge =
                 reactor.core.publisher.Sinks.many().unicast().onBackpressureBuffer();
-        ToolNotifier.setListener(name -> bridge.tryEmitNext(new ChatChunk(null, null, name)));
+        ToolNotifier.setListener(ev -> bridge.tryEmitNext(new ChatChunk(null, null, ev.name(), ev.detail())));
 
         chatClient.prompt()
                 .system(sys)
@@ -117,7 +117,7 @@ public class ChatService {
                     if (out != null && out.getToolCalls() != null && !out.getToolCalls().isEmpty()) {
                         toolName = out.getToolCalls().get(0).name();
                     }
-                    return new ChatChunk(reasoning, out != null ? out.getText() : null, toolName);
+                    return new ChatChunk(reasoning, out != null ? out.getText() : null, toolName, null);
                 })
                 .subscribe(
                         chunk -> bridge.tryEmitNext(chunk),
