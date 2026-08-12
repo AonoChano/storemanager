@@ -1,7 +1,15 @@
 package com.wjy.storemanager.service;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ChatService {
@@ -35,7 +43,7 @@ public class ChatService {
         this.chatClient = builder.defaultTools(inventoryTools).build();
     }
 
-    // 客服入口: 双层限制
+    // 客服入口(兼容旧调用): 双层限制, 单轮
     public String chat(String message) {
         // ① 硬拦截(不调AI): 命中明显跑题词 → 直接拒绝
         if (isOffTopic(message)) {
@@ -46,6 +54,43 @@ public class ChatService {
                 .system(SYSTEM_PROMPT)
                 .user(message)
                 .call()
+                .content();
+    }
+
+    // 客服入口(流式+多轮): 前端带最近对话历史, AI 能指代"刚才说的"
+    // history 格式: [{role:"user"|"assistant", content:"..."}]
+    public Flux<String> streamChat(String message, List<Map<String, String>> history, String userName) {
+        // ① 硬拦截(不调AI)
+        if (isOffTopic(message)) {
+            return Flux.just("我只能回答进销存相关的问题，比如采购、销售、库存、报表等。");
+        }
+
+        // ② 组装多轮历史(截断到最后 20 条, 控制 token)
+        List<Message> messages = new ArrayList<>();
+        if (history != null) {
+            int from = Math.max(0, history.size() - 20);
+            for (int i = from; i < history.size(); i++) {
+                Map<String, String> h = history.get(i);
+                String role = h.get("role");
+                String content = h.get("content");
+                if (content == null || content.isBlank()) continue;
+                if ("user".equals(role)) messages.add(new UserMessage(content));
+                else if ("assistant".equals(role)) messages.add(new AssistantMessage(content));
+            }
+        }
+        messages.add(new UserMessage(message));
+
+        // ③ 带上当前登录用户, 让 AI 能针对性回答
+        String sys = SYSTEM_PROMPT;
+        if (userName != null && !userName.isBlank()) {
+            sys = SYSTEM_PROMPT + "\n当前登录用户是" + userName + "，回答时可以用'您'称呼。";
+        }
+
+        // ④ 流式调用
+        return chatClient.prompt()
+                .system(sys)
+                .messages(messages)
+                .stream()
                 .content();
     }
 
