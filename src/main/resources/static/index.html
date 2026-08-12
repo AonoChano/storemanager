@@ -5,29 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>进销存管理系统</title>
 <meta name="description" content="进销存管理系统 · 采购/销售/库存/报表">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232dd4bf' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5'/><path d='M12 12l8 -4.5'/><path d='M12 12l0 9'/><path d='M12 12l-8 -4.5'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b87324' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5'/><path d='M12 12l8 -4.5'/><path d='M12 12l0 9'/><path d='M12 12l-8 -4.5'/></svg>">
+<!-- 共享主题 token(与登录页 login.html 共用, 一处改两页变) -->
+<link rel="stylesheet" href="theme.css">
+<script>
+  // 主题优先应用(防闪烁): localStorage > 跟随系统(与登录页同 key)
+  (function () {
+    var pref = localStorage.getItem('storemanager_theme') || 'system';
+    var resolved = pref === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : pref;
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.dataset.themePref = pref;
+  })();
+</script>
 <script src="echarts.min.js"></script>
 <style>
+  /* 共享主题 token 见 theme.css; 此处仅保留本页私有变量 */
   :root {
-    --bg: #0a0d12;
-    --surface: rgba(19, 24, 38, 0.72);
-    --surface-2: rgba(28, 35, 54, 0.85);
-    --border: rgba(148, 163, 184, 0.16);
-    --text: #e8ecf8;
-    --dim: #9aa3bd;
-    --faint: #5b6478;
-    --blue: #2dd4bf;
-    --violet: #60a5fa;
-    --cyan: #22d3ee;
-    --magenta: #fb923c;
-    --green: #34d399;
-    --amber: #fbbf24;
-    --red: #fb7185;
     --radius: 14px;
     --radius-sm: 9px;
   }
   * { box-sizing: border-box; }
-  html { color-scheme: dark; }
+  html { color-scheme: light; }
+  html[data-theme="dark"] { color-scheme: dark; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -43,22 +44,38 @@
     position: sticky; top: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 26px;
-    background: rgba(5, 6, 10, 0.92);
+    background: var(--topbar-bg);
     border-bottom: 1px solid var(--border);
   }
   .brand { display: flex; align-items: center; gap: 12px; }
   .logo {
     width: 38px; height: 38px; border-radius: 11px;
     display: grid; place-items: center;
-    background: rgba(45,212,191,.14);
+    background: var(--accent-soft);
     border: 1px solid rgba(148,163,184,.3);
-    color: var(--blue);
+    color: var(--accent);
   }
   .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em; color: #dfe6f7; }
   .brand .sub { font-size: 11px; color: var(--faint); margin-top: 1px; }
   .session { display: flex; align-items: center; gap: 14px; }
+  /* 顶栏主题切换(单按钮轮询: 亮色 -> 暗色 -> 跟随系统) */
+  .theme-toggle {
+    width: 30px; height: 30px; padding: 0;
+    display: grid; place-items: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--dim);
+    cursor: pointer;
+    transition: color .2s, border-color .2s;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+  .theme-toggle svg { display: none; }
+  .theme-toggle[data-pref="light"] .icon-sun { display: block; }
+  .theme-toggle[data-pref="dark"] .icon-moon { display: block; }
+  .theme-toggle[data-pref="system"] .icon-monitor { display: block; }
   .online { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); }
-  .online .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  .online .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
     animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
   .welcome { font-size: 13px; color: var(--dim); }
@@ -68,7 +85,7 @@
   .btn {
     padding: 8px 15px; border: 1px solid transparent; border-radius: var(--radius-sm);
     font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
-    background: var(--blue);
+    background: var(--accent);
     color: #fff;
     transition: transform .18s ease, filter .18s;
   }
@@ -79,15 +96,15 @@
 
   /* ===== 输入 ===== */
   input, select {
-    padding: 8px 12px; background-color: rgba(9,12,20,.8);
+    padding: 8px 12px; background-color: var(--input-bg);
     border: 1px solid var(--border); border-radius: var(--radius-sm);
     color: var(--text); font-size: 13px; font-family: inherit;
     transition: border-color .2s, box-shadow .2s;
   }
-  input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(45,212,191,.16); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,212,191,.16); }
   input { width: 130px; }
   input::placeholder { color: var(--faint); }
-  select option { background: #131826; }
+  select option { background: var(--surface-2); }
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 12px; }
   .row label { font-size: 12.5px; color: var(--dim); }
   .row label::after { content: ":"; margin-left: 2px; }
@@ -151,10 +168,10 @@
   .kpi-label { font-size: 12px; color: var(--dim); letter-spacing: .03em; }
   .kpi-num { margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -.01em;
     font-variant-numeric: tabular-nums; }
-  .kpi-num.cyan { color: #5eead4; }
-  .kpi-num.violet { color: #93c5fd; }
-  .kpi-num.amber { color: #ffd28a; }
-  .kpi-num.green { color: #7fe3b4; }
+  .kpi-num.cyan { color: var(--accent); }
+  .kpi-num.violet { color: var(--dim); }
+  .kpi-num.amber { color: var(--warn); }
+  .kpi-num.green { color: var(--ok); }
 
   /* ===== Tab(下划线式) ===== */
   .tabbar {
@@ -173,7 +190,7 @@
     color: var(--text);
     background: transparent;
     box-shadow: none;
-    border-bottom-color: var(--blue);
+    border-bottom-color: var(--accent);
   }
 
   /* ===== 面板/卡片(布线风: 无容器, 分隔线划分区块) ===== */
@@ -191,7 +208,7 @@
   .card-head h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .02em;
     display: flex; align-items: center; gap: 10px; color: var(--text); }
   .card-head h2::before { content: ""; width: 3px; height: 14px; border-radius: 1px;
-    background: var(--blue); }
+    background: var(--accent); }
   .card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
   /* ===== 图表网格 ===== */
@@ -203,35 +220,35 @@
   }
   .chart-title { font-size: 13px; color: var(--dim); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
   .chart-title::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
-    background: var(--blue); }
+    background: var(--accent); }
   .chart { width: 100%; height: 280px; }
 
   /* ===== 表格 ===== */
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; color: var(--faint);
-    letter-spacing: .04em; white-space: nowrap; background: rgba(255,255,255,.03); border-bottom: 1px solid var(--border); }
+    letter-spacing: .04em; white-space: nowrap; background: var(--th-bg); border-bottom: 1px solid var(--border); }
   td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.045); white-space: nowrap;
     font-variant-numeric: tabular-nums; }
   tbody tr { transition: background-color .15s; }
-  tbody tr:hover { background: rgba(45,212,191,.06); }
+  tbody tr:hover { background: var(--row-hover); }
   tbody tr:last-child td { border-bottom: none; }
   .empty { text-align: center; color: var(--faint); padding: 26px 0 !important; }
 
   /* ===== 徽章 ===== */
   .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
-  .badge.ok { background: rgba(52,211,153,.14); color: var(--green); }
+  .badge.ok { background: rgba(52,211,153,.14); color: var(--ok); }
   .badge.muted { background: rgba(255,255,255,.08); color: var(--dim); }
-  .badge.in { background: rgba(52,211,153,.14); color: var(--green); }
-  .badge.out { background: rgba(251,191,36,.14); color: var(--amber); }
-  .warn { color: var(--red); font-weight: 700; }
+  .badge.in { background: rgba(52,211,153,.14); color: var(--ok); }
+  .badge.out { background: rgba(251,191,36,.14); color: var(--warn); }
+  .warn { color: var(--err); font-weight: 700; }
 
   .tag { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11.5px; color: var(--dim); background: rgba(255,255,255,.05); }
   #profitInfo { margin: 2px 0 14px; font-size: 14px; color: var(--dim); display: flex; gap: 20px; flex-wrap: wrap; }
   #profitInfo b { color: var(--text); font-variant-numeric: tabular-nums; }
-  .green { color: var(--green) !important; }
-  .msg { color: var(--green); font-size: 12.5px; }
-  .err { color: var(--red); font-size: 12.5px; }
+  .green { color: var(--ok) !important; }
+  .msg { color: var(--ok); font-size: 12.5px; }
+  .err { color: var(--err); font-size: 12.5px; }
 
   /* ===== Toast ===== */
   #toastWrap { position: fixed; right: 22px; bottom: 22px; z-index: 100; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
@@ -239,14 +256,14 @@
     color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
     box-shadow: 0 6px 20px rgba(0,0,0,.35); animation: toastIn .3s cubic-bezier(.2,.8,.2,1); }
   .toast.ok { border-color: rgba(52,211,153,.5); }
-  .toast.ok::before { content: ""; width: 14px; height: 14px; flex-shrink: 0; background: var(--green);
+  .toast.ok::before { content: ""; width: 14px; height: 14px; flex-shrink: 0; background: var(--ok);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5l10 -10'/%3E%3C/svg%3E") center/contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5l10 -10'/%3E%3C/svg%3E") center/contain no-repeat; }
   .toast.err { border-color: rgba(251,113,133,.5); }
-  .toast.err::before { content: ""; width: 14px; height: 14px; flex-shrink: 0; background: var(--red);
+  .toast.err::before { content: ""; width: 14px; height: 14px; flex-shrink: 0; background: var(--err);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E") center/contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E") center/contain no-repeat; }
-  .toast.info::before { content: ""; width: 14px; height: 14px; flex-shrink: 0; background: var(--blue);
+  .toast.info::before { content: ""; width: 14px; height: 14px; flex-shrink: 0; background: var(--accent);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0'/%3E%3Cpath d='M12 9h.01'/%3E%3Cpath d='M11 12h1v4h1'/%3E%3C/svg%3E") center/contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0'/%3E%3Cpath d='M12 9h.01'/%3E%3Cpath d='M11 12h1v4h1'/%3E%3C/svg%3E") center/contain no-repeat; }
   @keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
@@ -255,7 +272,7 @@
   #chatFab {
     position: fixed; left: 22px; bottom: 22px; z-index: 90;
     width: 52px; height: 52px; border-radius: 50%;
-    background: var(--blue);
+    background: var(--accent);
     color: #fff;
     border: 1px solid rgba(148,163,184,.4);
     display: grid; place-items: center; cursor: pointer;
@@ -280,7 +297,7 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 13px 16px; border-bottom: 1px solid var(--border);
     font-weight: 650; font-size: 14px;
-    background: rgba(255,255,255,.03);
+    background: var(--th-bg);
     flex-shrink: 0;
   }
   .chat-close { background: none; border: none; color: var(--dim); cursor: pointer; padding: 4px; line-height: 1; display: grid; place-items: center; }
@@ -291,25 +308,25 @@
   /* 快捷问题引导 */
   .chat-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .chat-quick button { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--dim); font-size: 12px; padding: 5px 10px; border-radius: 999px; cursor: pointer; transition: all .15s; font-family: inherit; }
-  .chat-quick button:hover { color: var(--text); border-color: var(--blue); }
+  .chat-quick button:hover { color: var(--text); border-color: var(--accent); }
   /* 消息元信息: 时间/复制(图标, 成功变勾)/重试 */
   .chat-msg .meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 10.5px; color: var(--faint); }
   .chat-msg .copy-btn { background: none; border: none; color: var(--faint); cursor: pointer; padding: 0; display: none; line-height: 1; }
   .chat-msg:hover .copy-btn { display: inline-flex; }
-  .chat-msg .copy-btn:hover { color: var(--blue); }
-  .chat-msg .copy-btn.copied { color: var(--green); }
+  .chat-msg .copy-btn:hover { color: var(--accent); }
+  .chat-msg .copy-btn.copied { color: var(--ok); }
   .chat-msg .retry-btn { background: none; border: 1px solid var(--border); color: var(--dim); font-size: 11px; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-family: inherit; }
-  .chat-msg .retry-btn:hover { color: var(--text); border-color: var(--red); }
+  .chat-msg .retry-btn:hover { color: var(--text); border-color: var(--err); }
   /* AI 回答的 Markdown 排版 */
-  .chat-msg pre { background: rgba(0,0,0,.35); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; overflow-x: auto; font-size: 12px; line-height: 1.55; margin: 6px 0; }
-  .chat-msg code { font-family: Consolas, Monaco, "Courier New", monospace; background: rgba(0,0,0,.3); border-radius: 3px; padding: 1px 4px; font-size: 12px; }
+  .chat-msg pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; overflow-x: auto; font-size: 12px; line-height: 1.55; margin: 6px 0; }
+  .chat-msg code { font-family: Consolas, Monaco, "Courier New", monospace; background: var(--code-bg); border-radius: 3px; padding: 1px 4px; font-size: 12px; }
   .chat-msg pre code { background: none; padding: 0; }
   .chat-msg ul, .chat-msg ol { margin: 4px 0; padding-left: 18px; }
   .chat-msg li { margin: 2px 0; }
   .chat-msg table { border-collapse: collapse; margin: 6px 0; font-size: 12px; }
   .chat-msg th, .chat-msg td { border: 1px solid var(--border); padding: 4px 8px; }
-  .chat-msg th { background: rgba(255,255,255,.04); }
-  .chat-msg a { color: var(--blue); }
+  .chat-msg th { background: var(--th-bg); }
+  .chat-msg a { color: var(--accent); }
   .chat-msg h2, .chat-msg h3, .chat-msg h4 { margin: 8px 0 4px; font-size: 14px; }
   .chat-msg br { content: ""; display: block; margin: 2px 0; }
   /* 思考中三点动画 */
@@ -320,7 +337,7 @@
   @keyframes chatBlink { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
   .chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
   .chat-msg { max-width: 82%; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-  .chat-msg.user { align-self: flex-end; background: rgba(45,212,191,.85); color: #fff; border-bottom-right-radius: 3px; }
+  .chat-msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
   /* AI 消息无气泡: 满宽文字流(参考 Claude 侧边栏排版) */
   .chat-msg.bot { align-self: stretch; max-width: 100%; background: none; border: none; border-radius: 0; padding: 2px 4px; white-space: normal; }
   .chat-msg.bot .meta { margin-top: 8px; }
@@ -329,7 +346,7 @@
   /* 发送按钮: 小飞机, 生成中变停止方块 */
   .chat-send { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; flex-shrink: 0; }
   .chat-send svg { display: block; }
-  .chat-send.stopping { background: var(--red); }
+  .chat-send.stopping { background: var(--err); }
 
   @media (max-width: 860px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -357,6 +374,19 @@
     </div>
   </div>
   <div class="session" id="session" style="display:none">
+    <button class="theme-toggle" id="themeToggle" title="主题: 跟随系统" aria-label="切换主题">
+      <svg class="icon-sun" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <circle cx="8" cy="8" r="3.2"/>
+        <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13.2 9.6A5.8 5.8 0 0 1 6.4 2.8 5.8 5.8 0 1 0 13.2 9.6z"/>
+      </svg>
+      <svg class="icon-monitor" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1.5" y="2.5" width="13" height="9" rx="1"/>
+        <path d="M5.5 14.5h5M8 11.5v3"/>
+      </svg>
+    </button>
     <span class="online"><span class="dot"></span>在线</span>
     <span class="welcome">欢迎，<b id="welcomeText"></b></span>
     <button class="btn ghost" onclick="logout()">退出登录</button>
@@ -879,6 +909,14 @@ function renderKpi(todaySale, totalStock, warnCount, profit) {
   countUp(document.getElementById('kpiWarn'), warnCount, false);
   countUp(document.getElementById('kpiProfit'), profit, true);
 }
+// 主题感知颜色: 从共享 CSS 变量读取(亮/暗自动适配)
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function hexA(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 async function loadOverview() {
   try {
     const [trend, pvs, top, cat, profit] = await Promise.all([
@@ -904,23 +942,23 @@ async function loadOverview() {
     renderKpi(hasData ? todaySale : null, hasData ? totalStock : null,
       hasData ? warnCount : null, hasData ? Number((profit && profit.profit) || 0) : null);
 
-    const axis = { axisLine: { lineStyle: { color: 'rgba(154,163,189,.25)' } },
-      axisLabel: { color: '#9aa3bd' }, axisTick: { show: false } };
-    const split = { splitLine: { lineStyle: { color: 'rgba(154,163,189,.07)' } }, axisLabel: { color: '#9aa3bd' } };
+    const axis = { axisLine: { lineStyle: { color: hexA(cssVar('--faint'), .4) } },
+      axisLabel: { color: cssVar('--dim') }, axisTick: { show: false } };
+    const split = { splitLine: { lineStyle: { color: hexA(cssVar('--faint'), .15) } }, axisLabel: { color: cssVar('--dim') } };
 
     // 1 日销趋势折线
     charts.trend = echarts.init(document.getElementById('chartTrend'));
     charts.trend.setOption({
-      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
       grid: { left: 44, right: 16, top: 20, bottom: 26 },
       xAxis: { type: 'category', data: trend.map(t => t.day), ...axis },
       yAxis: { type: 'value', ...split },
       series: [{
         name: '销售额', type: 'line', smooth: true, symbolSize: 6, data: trend.map(t => t.amount),
-        lineStyle: { width: 2.5, color: '#2dd4bf' },
-        itemStyle: { color: '#2dd4bf', borderColor: '#fff', borderWidth: 1 },
+        lineStyle: { width: 2.5, color: cssVar('--accent') },
+        itemStyle: { color: cssVar('--accent'), borderColor: '#fff', borderWidth: 1 },
         areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[
-          { offset: 0, color: 'rgba(45,212,191,.35)' }, { offset: 1, color: 'rgba(45,212,191,0)' }]) }
+          { offset: 0, color: hexA(cssVar('--accent'), .35) }, { offset: 1, color: hexA(cssVar('--accent'), 0) }]) }
       }]
     });
 
@@ -929,16 +967,16 @@ async function loadOverview() {
     // 2 采购 vs 销售 柱状(同轴: 都是金额)
     charts.pvs = echarts.init(document.getElementById('chartPvs'));
     charts.pvs.setOption({
-      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
-      legend: { data: ['采购', '销售'], textStyle: { color: '#9aa3bd' }, top: 0 },
+      tooltip: { trigger: 'axis', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
+      legend: { data: ['采购', '销售'], textStyle: { color: cssVar('--dim') }, top: 0 },
       grid: { left: 44, right: 16, top: 34, bottom: 26 },
       xAxis: { type: 'category', data: pvs.map(p => p.day), ...axis },
       yAxis: { type: 'value', ...split },
       series: [
         { name: '采购', type: 'bar', barWidth: 12, data: pvs.map(p => p.purchaseAmount || 0),
-          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#60a5fa'},{offset:1,color:'rgba(96,165,250,.35)'}]) } },
+          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:cssVar('--accent')},{offset:1,color:hexA(cssVar('--accent'),.35)}]) } },
         { name: '销售', type: 'bar', barWidth: 12, data: pvs.map(p => p.saleAmount || 0),
-          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#22d3ee'},{offset:1,color:'rgba(34,211,238,.3)'}]) } }
+          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:cssVar('--ok')},{offset:1,color:hexA(cssVar('--ok'),.3)}]) } }
       ]
     });
 
@@ -947,28 +985,28 @@ async function loadOverview() {
     // 3 商品 TOP5 条形
     charts.top = echarts.init(document.getElementById('chartTop'));
     charts.top.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
       grid: { left: 60, right: 30, top: 10, bottom: 24 },
       xAxis: { type: 'value', ...split },
       yAxis: { type: 'category', data: top.map(t => t.name).reverse(), ...axis },
       series: [{ type: 'bar', data: top.map(t => t.amount).reverse(), barWidth: 14,
         itemStyle: { borderRadius: [0,6,6,0], color: new echarts.graphic.LinearGradient(0,0,1,0,[
-          { offset: 0, color: 'rgba(45,212,191,.2)' }, { offset: 1, color: '#2dd4bf' }]) } }]
+          { offset: 0, color: hexA(cssVar('--accent'), .2) }, { offset: 1, color: cssVar('--accent') }]) } }]
     });
 
     if (top.length) { setChartEmpty('chartTop', false); } else { charts.top.clear(); setChartEmpty('chartTop', true, '暂无销售数据'); }
 
     // 4 库存分类环形
     charts.cat = echarts.init(document.getElementById('chartCat'));
-    const catColors = ['#2dd4bf','#60a5fa','#fbbf24','#34d399','#fb7185','#94a3b8'];
+    const catColors = [cssVar('--accent'), cssVar('--ok'), cssVar('--warn'), cssVar('--err'), cssVar('--dim'), cssVar('--faint')];
     charts.cat.setOption({
-      tooltip: { trigger: 'item', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
-      legend: { orient: 'vertical', right: 6, top: 'center', textStyle: { color: '#9aa3bd' }, itemWidth: 10, itemHeight: 10 },
+      tooltip: { trigger: 'item', backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: '#e8ecf8' } },
+      legend: { orient: 'vertical', right: 6, top: 'center', textStyle: { color: cssVar('--dim') }, itemWidth: 10, itemHeight: 10 },
       color: catColors,
       series: [{
         type: 'pie', radius: ['42%', '70%'], center: ['40%', '50%'],
-        avoidLabelOverlap: true, label: { color: '#9aa3bd', formatter: '{b} {d}%' },
-        itemStyle: { borderColor: '#0b0e14', borderWidth: 2 },
+        avoidLabelOverlap: true, label: { color: cssVar('--dim'), formatter: '{b} {d}%' },
+        itemStyle: { borderColor: cssVar('--bg'), borderWidth: 2 },
         data: cat.map((c, i) => ({ name: c.name || '未分类', value: c.stock, itemStyle: { color: catColors[i % catColors.length] } }))
       }]
     });
@@ -981,6 +1019,44 @@ document.getElementById('poProduct').addEventListener('change', syncPrice);
 document.getElementById('soProduct').addEventListener('change', syncPrice);
 // 回车登录
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ========== 主题切换: 单按钮轮询 亮色 -> 暗色 -> 跟随系统 ==========
+// 偏好存 localStorage['storemanager_theme'], 与登录页共用(一处切换两页同步)
+const THEME_CYCLE = ['light', 'dark', 'system'];
+const themeToggle = document.getElementById('themeToggle');
+
+function syncThemeToggle() {
+  const pref = document.documentElement.dataset.themePref || 'system';
+  themeToggle.dataset.pref = pref;
+  themeToggle.title = pref === 'light' ? '主题: 亮色' : pref === 'dark' ? '主题: 暗色' : '主题: 跟随系统';
+}
+
+function applyTheme() {
+  const pref = document.documentElement.dataset.themePref || 'system';
+  const resolved = pref === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : pref;
+  document.documentElement.dataset.theme = resolved;
+  syncThemeToggle();
+  // 主题变化后重绘图表配色
+  const app = document.getElementById('app');
+  if (app && app.style.display !== 'none' && typeof loadOverview === 'function') loadOverview();
+}
+
+themeToggle.addEventListener('click', () => {
+  const cur = document.documentElement.dataset.themePref || 'system';
+  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(cur) + 1) % THEME_CYCLE.length];
+  document.documentElement.dataset.themePref = next;
+  localStorage.setItem('storemanager_theme', next);
+  applyTheme();
+});
+
+// 跟随系统模式下, 系统主题变化时实时切换
+const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+themeMedia.addEventListener('change', () => {
+  if (document.documentElement.dataset.themePref === 'system') applyTheme();
+});
+syncThemeToggle();
 
 // ========== 启动: 有本地会话直接进入, 否则跳转独立登录页(login.html) ==========
 (async function boot() {

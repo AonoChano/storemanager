@@ -1,0 +1,57 @@
+/* ============================================================
+ * 共享主题 Token — 登录页(login.html)与主系统(index.html)共用
+ * 一处修改, 两页同步生效
+ *
+ * 亮色: 羊皮纸档案风(米黄底 + 墨色文字 + 琥珀金强调)
+ * 暗色: 黑白银(深黑底 + 银白文字 + 琥珀金强调)
+ *
+ * 主题切换: <html data-theme="light|dark"> + <html data-theme-pref="light|dark|system">
+ * 偏好持久化: localStorage['storemanager_theme']
+ * ============================================================ */
+:root {
+  /* ===== 亮色(默认) ===== */
+  --bg: #f4efd8;                /* 页面背景: 羊皮纸 */
+  --surface: #fbf9ec;           /* 表面: 卡片/侧栏/面板 */
+  --surface-2: #efe9d2;         /* 深一档表面: 输入框/次级面板 */
+  --text: #2c2824;              /* 主文字: 墨色 */
+  --dim: #5c5549;               /* 次要文字 */
+  --faint: #8a8172;             /* 弱化文字/占位 */
+  --border: rgba(44, 40, 36, 0.18);
+  --accent: #b87324;            /* 强调色: 琥珀金(按钮/高亮/图表主色) */
+  --accent-soft: rgba(184, 115, 36, 0.14);
+  --ok: #4a7c59;                /* 成功 */
+  --warn: #b87324;              /* 预警 */
+  --err: #8b3a3a;               /* 错误/印章红 */
+  --shadow: rgba(44, 40, 36, 0.15);
+  /* 结构色(亮暗各不同) */
+  --topbar-bg: rgba(244, 239, 216, 0.92);
+  --input-bg: rgba(255, 255, 255, 0.5);
+  --th-bg: rgba(0, 0, 0, 0.03);
+  --code-bg: rgba(0, 0, 0, 0.06);
+  --row-hover: rgba(184, 115, 36, 0.08);
+}
+
+[data-theme="dark"] {
+  /* ===== 暗色(黑白银) ===== */
+  --bg: #0d0d0f;
+  --surface: #212126;
+  --surface-2: #17171a;
+  --text: #e9e7e2;
+  --dim: #9a978f;
+  --faint: #6b6a66;
+  --border: rgba(233, 231, 226, 0.16);
+  --accent: #c9a05e;
+  --accent-soft: rgba(201, 160, 94, 0.16);
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #c05f5f;
+  --shadow: rgba(0, 0, 0, 0.55);
+  --topbar-bg: rgba(5, 6, 10, 0.92);
+  --input-bg: rgba(9, 12, 20, 0.8);
+  --th-bg: rgba(255, 255, 255, 0.03);
+  --code-bg: rgba(0, 0, 0, 0.35);
+  --row-hover: rgba(201, 160, 94, 0.08);
+}
+
+/* ===== 主题切换公共脚本(防闪烁, 放 <head> 内联调用) ===== */
+/* 用法: <script>initTheme();</script> */
