@@ -72,7 +72,7 @@ public class SaleOrderServiceImpl implements SaleOrderService {
             //记录流水
             StockRecord record=new StockRecord();
             record.setProductId(detail.getProductId());
-            record.setType((byte)1);
+            record.setType((byte)0);//0表示出库,1表示入库(与采购入库约定一致)
             record.setQuantity(detail.getQuantity());
             record.setBizType("销售出库");
             record.setOperatorId(order.getOperatorId());
