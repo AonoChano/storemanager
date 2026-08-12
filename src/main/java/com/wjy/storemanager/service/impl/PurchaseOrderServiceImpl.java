@@ -1,5 +1,6 @@
 package com.wjy.storemanager.service.impl;
 
+import com.wjy.storemanager.common.CacheKeys;
 import com.wjy.storemanager.entity.PurchaseOrder;
 import com.wjy.storemanager.entity.PurchaseOrderDetail;
 import com.wjy.storemanager.entity.StockRecord;
@@ -9,6 +10,7 @@ import com.wjy.storemanager.mapper.PurchaseOrderMapper;
 import com.wjy.storemanager.mapper.StockRecordMapper;
 import com.wjy.storemanager.service.PurchaseOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private ProductMapper productMapper;
     @Autowired
     private StockRecordMapper stockRecordMapper;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * 商品入库实现方法,原子化操作
@@ -53,6 +57,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         detail.setOrderId(Order.getId());//前面先插总表,再将总表的id传入这个明细
         detailMapper.insert(detail);//插入明细
         productMapper.updateStock(detail.getQuantity(),detail.getProductId());
+
         //记录流水
             StockRecord record=new StockRecord();
             record.setProductId(detail.getProductId());
@@ -61,13 +66,14 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             record.setBizType("采购入库");
             record.setOrderNo(Order.getOrderNo());
             record.setOperatorId(Order.getOperatorId());
+            record.setCreateTime(new Date());
             Integer newStock= productMapper.selectByPrimaryKey(detail.getProductId()).getStock();
             record.setAfterStock(newStock);
             stockRecordMapper.insert(record);
 
         }
 
-
+        stringRedisTemplate.delete(CacheKeys.PRODUCT_LIST);
     }
 
 

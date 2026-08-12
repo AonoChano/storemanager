@@ -99,7 +99,26 @@
             <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
+        <!-- Spring AI + DeepSeek 客服 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-deepseek</artifactId>
+        </dependency>
+
     </dependencies>
+
+    <!-- Spring AI BOM: 统一管理 spring-ai 依赖版本 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>2.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>

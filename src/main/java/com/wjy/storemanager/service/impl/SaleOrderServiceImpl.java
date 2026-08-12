@@ -1,5 +1,6 @@
 package com.wjy.storemanager.service.impl;
 
+import com.wjy.storemanager.common.CacheKeys;
 import com.wjy.storemanager.entity.*;
 import com.wjy.storemanager.mapper.ProductMapper;
 import com.wjy.storemanager.mapper.SaleOrderDetailMapper;
@@ -8,6 +9,7 @@ import com.wjy.storemanager.mapper.StockRecordMapper;
 import com.wjy.storemanager.service.SaleOrderService;
 import com.wjy.storemanager.vo.SaleReportVo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,8 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     private SaleOrderDetailMapper detailMapper;
     @Autowired
     private StockRecordMapper stockRecordMapper;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * 出库销售方法,原子化操作
@@ -48,7 +52,7 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         //初始化订单
         order.setTotalAmount(total);
         order.setOrderNo("S0"+System.currentTimeMillis());
-        order.setStatus((byte)0);//待出库0,已出库是1
+        order.setStatus((byte)1);//待出库0,已出库是1
         order.setRemark("销售出库");
         order.setCreateTime(new Date());
 
@@ -66,11 +70,13 @@ public class SaleOrderServiceImpl implements SaleOrderService {
             record.setBizType("销售出库");
             record.setOperatorId(order.getOperatorId());
             record.setOrderNo(order.getOrderNo());
+            record.setCreateTime(new Date());
             Integer newStock=productMapper.selectByPrimaryKey(detail.getProductId()).getStock();
             record.setAfterStock(newStock);
             stockRecordMapper.insert(record);
-        }
 
+        }
+        stringRedisTemplate.delete(CacheKeys.PRODUCT_LIST);
     }
 
 

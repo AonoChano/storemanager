@@ -6,6 +6,7 @@ import com.wjy.storemanager.service.StockRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.security.PublicKey;
 import java.util.List;
 @Service
 public class StockServiceImpl implements StockRecordService {
@@ -15,4 +16,6 @@ public class StockServiceImpl implements StockRecordService {
     public List<StockRecord> selectStockRecord(Long productId, Byte type) {
         return stockRecordMapper.selectStockRecord(productId,type);
     }
+
+
 }

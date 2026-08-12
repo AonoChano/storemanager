@@ -3,195 +3,537 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>进销存管理系统 · 演示页</title>
+<title>进销存管理系统</title>
+<meta name="description" content="进销存管理系统 · 采购/销售/库存/报表">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+<script src="echarts.min.js"></script>
 <style>
-  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; margin: 0; background: #f5f6fa; color: #333; }
-  header { background: #2c3e50; color: #fff; padding: 14px 24px; }
-  header h1 { margin: 0; font-size: 18px; }
-  header span { font-size: 12px; color: #aab; margin-left: 12px; }
-  main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
-  .card { background: #fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-  .card h2 { margin: 0 0 12px; font-size: 16px; border-left: 4px solid #3498db; padding-left: 8px; }
+  :root {
+    --bg: #05060a;
+    --surface: rgba(19, 24, 38, 0.72);
+    --surface-2: rgba(28, 35, 54, 0.85);
+    --border: rgba(139, 156, 255, 0.14);
+    --text: #e8ecf8;
+    --dim: #9aa3bd;
+    --faint: #5b6478;
+    --blue: #4f7cff;
+    --violet: #8b5cf6;
+    --cyan: #22d3ee;
+    --magenta: #e879f9;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #fb7185;
+    --radius: 14px;
+    --radius-sm: 9px;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(1100px 560px at 85% -8%, rgba(139, 92, 246, 0.14), transparent 60%),
+      radial-gradient(900px 480px at -6% 15%, rgba(79, 124, 255, 0.10), transparent 55%),
+      radial-gradient(700px 400px at 50% 110%, rgba(34, 211, 238, 0.06), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== 顶栏 ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 26px;
+    background: rgba(5, 6, 10, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 11px;
+    display: grid; place-items: center; font-size: 20px;
+    background: linear-gradient(135deg, rgba(79,124,255,.4), rgba(139,92,246,.25));
+    box-shadow: 0 4px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.1);
+    border: 1px solid rgba(139,156,255,.35);
+  }
+  .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em;
+    background: linear-gradient(90deg, #7fa3ff, #b79aff);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .brand .sub { font-size: 11px; color: var(--faint); margin-top: 1px; }
+  .session { display: flex; align-items: center; gap: 14px; }
+  .online { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); }
+  .online .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+    animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .welcome { font-size: 13px; color: var(--dim); }
+  .welcome b { color: var(--text); }
+
+  /* ===== 按钮 ===== */
+  .btn {
+    padding: 8px 15px; border: 1px solid transparent; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    color: #fff;
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s;
+  }
+  .btn:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); transform: translateY(-1px); filter: brightness(1.15); }
+  .btn:active { transform: scale(0.96); }
+  .btn.ghost { background: transparent; border-color: var(--border); color: var(--dim); }
+  .btn.ghost:hover { color: var(--text); box-shadow: none; border-color: rgba(139,156,255,.4); }
+
+  /* ===== 输入 ===== */
+  input, select {
+    padding: 8px 12px; background-color: rgba(9,12,20,.8);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 13px; font-family: inherit;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,124,255,.18); }
+  input { width: 130px; }
+  input::placeholder { color: var(--faint); }
+  select option { background: #131826; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 12px; }
+  .row label { font-size: 12.5px; color: var(--dim); }
+  .row label::after { content: ":"; margin-left: 2px; }
+  .form-row { padding-top: 14px; margin-top: 4px; border-top: 1px solid var(--border); }
+
+  /* ===== 主区域 ===== */
+  main { max-width: 1220px; margin: 0 auto; padding: 24px 22px 60px; }
+
+  /* ===== 登录 ===== */
+  .login-wrap { min-height: 62dvh; display: grid; place-items: center; }
+  #loginCard {
+    width: 100%; max-width: 360px; padding: 34px 30px;
+    background: var(--surface); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.55);
+  }
+  #loginCard h2 { margin: 0 0 24px; text-align: center; font-size: 25px; letter-spacing: -.01em;
+    background: linear-gradient(90deg, #7fa3ff, #c4a7ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+  .field label { font-size: 12px; color: var(--dim); }
+  .field input, .field select { width: 100%; }
+  .form { display: flex; flex-direction: column; gap: 15px; max-width: 660px; margin: 0 auto; }
+  .form-row { display: flex; align-items: center; gap: 14px; }
+  .form-row > label { width: 120px; flex-shrink: 0; font-size: 13px; color: var(--dim); }
+  .form-row > input, .form-row > select { flex: 1; min-width: 0; }
+  .form-row .btn { flex-shrink: 0; }
+  .form-actions { display: flex; gap: 10px; padding-left: 134px; }
+  .hint { margin-top: 15px; font-size: 12px; color: var(--faint); text-align: center; }
+
+  /* ===== KPI ===== */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+  .kpi {
+    position: relative; overflow: hidden;
+    background: linear-gradient(150deg, rgba(79,124,255,.14), rgba(139,92,246,.10), transparent 75%);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .kpi::after {
+    content: ""; position: absolute; top: -60px; right: -60px; width: 140px; height: 140px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(79,124,255,.35), transparent 70%);
+    filter: blur(10px); pointer-events: none;
+  }
+  .kpi-label { font-size: 12px; color: var(--dim); letter-spacing: .03em; }
+  .kpi-num { margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums; }
+  .kpi-num.cyan { color: #7fd7ff; }
+  .kpi-num.violet { color: #c4a7ff; }
+  .kpi-num.amber { color: #ffd28a; }
+  .kpi-num.green { color: #7fe3b4; }
+
+  /* ===== Tab ===== */
+  .tabbar {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 18px;
+    padding: 5px; background: rgba(19,24,38,.6); border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .tab {
+    padding: 8px 18px; border: none; border-radius: 8px; background: transparent;
+    color: var(--dim); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all .2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(79,124,255,.28), rgba(139,92,246,.22));
+    box-shadow: inset 0 0 0 1px rgba(139,156,255,.3);
+  }
+
+  /* ===== 面板/卡片 ===== */
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeUp .35s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .card {
+    background: var(--surface); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px; margin-bottom: 18px;
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .card-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .01em;
+    display: flex; align-items: center; gap: 10px; }
+  .card-head h2::before { content: ""; width: 3px; height: 16px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--blue), var(--violet)); }
+  .card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  /* ===== 图表网格 ===== */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .chart-box { min-width: 0; }
+  .chart-title { font-size: 13px; color: var(--dim); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .chart-title::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--blue); }
+  .chart { width: 100%; height: 280px; }
+
+  /* ===== 表格 ===== */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; white-space: nowrap; }
-  th { background: #f0f2f5; }
-  input, select, button { padding: 6px 10px; margin: 2px 4px 2px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; box-sizing: border-box; }
-  input { width: 110px; }
-  button { background: #3498db; color: #fff; border: none; cursor: pointer; }
-  button:hover { opacity: .9; }
-  button.gray { background: #95a5a6; }
-  .warn { color: #e74c3c; font-weight: bold; }
-  .row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
-  .row label { font-size: 13px; color: #666; }
-  .tag { background: #eef2f7; border-radius: 4px; padding: 2px 6px; font-size: 12px; }
-  #profitInfo { margin: 8px 0; font-size: 14px; }
-  .msg { color: #27ae60; }
-  .err { color: #e74c3c; }
+  th { text-align: left; padding: 10px 14px; font-size: 11.5px; font-weight: 600; color: var(--faint);
+    letter-spacing: .04em; white-space: nowrap; background: rgba(255,255,255,.03); border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.045); white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  tbody tr { transition: background-color .15s; }
+  tbody tr:hover { background: rgba(79,124,255,.06); }
+  tbody tr:last-child td { border-bottom: none; }
+  .empty { text-align: center; color: var(--faint); padding: 26px 0 !important; }
+
+  /* ===== 徽章 ===== */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+  .badge.ok { background: rgba(52,211,153,.14); color: var(--green); }
+  .badge.muted { background: rgba(255,255,255,.08); color: var(--dim); }
+  .badge.in { background: rgba(52,211,153,.14); color: var(--green); }
+  .badge.out { background: rgba(251,191,36,.14); color: var(--amber); }
+  .warn { color: var(--red); font-weight: 700; }
+
+  .tag { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11.5px; color: var(--dim); background: rgba(255,255,255,.05); }
+  #profitInfo { margin: 2px 0 14px; font-size: 14px; color: var(--dim); display: flex; gap: 20px; flex-wrap: wrap; }
+  #profitInfo b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .green { color: var(--green) !important; }
+  .msg { color: var(--green); font-size: 12.5px; }
+  .err { color: var(--red); font-size: 12.5px; }
+
+  /* ===== Toast ===== */
+  #toastWrap { position: fixed; right: 22px; bottom: 22px; z-index: 100; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  .toast { display: flex; align-items: center; gap: 9px; padding: 11px 16px; border-radius: 10px; font-size: 13px;
+    color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+    box-shadow: 0 14px 40px rgba(0,0,0,.5); animation: toastIn .3s cubic-bezier(.2,.8,.2,1); }
+  .toast.ok { border-color: rgba(52,211,153,.5); } .toast.ok::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .toast.err { border-color: rgba(251,113,133,.5); } .toast.err::before { content: "!"; color: var(--red); font-weight: 700; }
+  .toast.info::before { content: "·"; color: var(--blue); font-weight: 900; font-size: 18px; line-height: 0; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+
+  /* ===== 客服窗口 ===== */
+  #chatFab {
+    position: fixed; left: 22px; bottom: 22px; z-index: 90;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    border: 1px solid rgba(139,156,255,.4);
+    display: grid; place-items: center; font-size: 22px; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    transition: transform .18s, filter .18s;
+  }
+  #chatFab:hover { transform: translateY(-2px); filter: brightness(1.12); }
+  #chatPanel {
+    position: fixed; left: 22px; bottom: 84px; z-index: 90;
+    width: 330px; height: 440px;
+    background: var(--surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 14px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+    animation: fadeUp .25s ease;
+  }
+  .chat-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    font-weight: 650; font-size: 14px;
+    background: linear-gradient(120deg, rgba(79,124,255,.15), transparent);
+  }
+  .chat-close { background: none; border: none; color: var(--dim); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .chat-close:hover { color: var(--text); }
+  .chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .chat-msg { max-width: 82%; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .chat-msg.user { align-self: flex-end; background: linear-gradient(135deg, rgba(79,124,255,.8), rgba(139,92,246,.7)); color: #fff; border-bottom-right-radius: 3px; }
+  .chat-msg.bot { align-self: flex-start; background: rgba(255,255,255,.06); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+  .chat-input-row input { flex: 1; }
+
+  @media (max-width: 860px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    input { width: 100%; }
+    .topbar { padding: 10px 14px; }
+  }
 </style>
 </head>
 <body>
-<header><h1>进销存管理系统 · 前端演示<span>纯前端调用后端接口验证</span></h1></header>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">📦</div>
+    <div>
+      <h1>进销存管理系统</h1>
+      <div class="sub">采购 · 销售 · 库存 · 报表</div>
+    </div>
+  </div>
+  <div class="session" id="session" style="display:none">
+    <span class="online"><span class="dot"></span>在线</span>
+    <span class="welcome">欢迎，<b id="welcomeText"></b></span>
+    <button class="btn ghost" onclick="logout()">退出登录</button>
+  </div>
+</header>
+
 <main>
 
-  <!-- 用户登录(门禁, 不登录看不到主内容) -->
-  <div id="loginCard" class="card" style="max-width:420px;margin:80px auto;">
-    <h2>用户登录</h2>
-    <div class="row">
-      <input id="loginUser" placeholder="用户名">
-      <input id="loginPass" placeholder="密码" type="password">
-      <button onclick="doLogin()">登录</button>
+  <!-- 登录 -->
+  <div class="login-wrap" id="loginWrap">
+    <div id="loginCard">
+      <h2>登录系统</h2>
+      <div class="field">
+        <label>用户名</label>
+        <input id="loginUser" placeholder="请输入用户名" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input id="loginPass" placeholder="请输入密码" type="password" autocomplete="current-password">
+      </div>
       <span id="loginMsg"></span>
+      <button class="btn" onclick="doLogin()" style="width:100%;">登 录</button>
+      <div class="hint">默认账号 admin / 123456</div>
     </div>
-    <div class="tag">默认账号 admin / 123456</div>
   </div>
 
-  <!-- 主内容(登录成功后显示) -->
+  <!-- 主内容 -->
   <div id="app" style="display:none">
-  <div class="card" style="background:#eaf6ee;">
-    <b id="welcomeText"></b>
-    <button onclick="logout()" style="background:#95a5a6;">退出登录</button>
-  </div>
 
-  <!-- 商品管理 -->
-  <div class="card">
-    <h2>商品管理</h2>
-    <div class="row">
-      <input id="searchName" placeholder="按名称搜索">
-      <button onclick="loadProducts()">搜索</button>
-      <button class="gray" onclick="loadProductOptions()">刷新商品下拉</button>
-      <span class="tag">库存低于预警线会标红</span>
-      <span id="productMsg"></span>
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">今日销售额</div><div class="kpi-num cyan" id="kpiSale">0</div></div>
+      <div class="kpi"><div class="kpi-label">库存总量</div><div class="kpi-num violet" id="kpiStock">0</div></div>
+      <div class="kpi"><div class="kpi-label">预警商品</div><div class="kpi-num amber" id="kpiWarn">0</div></div>
+      <div class="kpi"><div class="kpi-label">累计毛利</div><div class="kpi-num green" id="kpiProfit">0</div></div>
     </div>
-    <table>
-      <thead><tr><th>ID</th><th>名称</th><th>条码</th><th>分类</th><th>规格</th><th>单位</th><th>进价</th><th>售价</th><th>库存</th><th>预警线</th><th>状态</th></tr></thead>
-      <tbody id="productBody"></tbody>
-    </table>
-    <div class="row" style="margin-top:12px;">
-      <label>新增商品:</label>
-      <input id="pName" placeholder="名称">
-      <input id="pBarcode" placeholder="条码">
-      <select id="pCategory"></select>
-      <input id="pSpec" placeholder="规格">
-      <input id="pUnit" placeholder="单位">
-      <input id="pPurchase" placeholder="进价" type="number" step="0.01">
-      <input id="pSale" placeholder="售价" type="number" step="0.01">
-      <input id="pWarn" placeholder="预警阈值" type="number">
-      <button onclick="addProduct()">新增</button>
-    </div>
-  </div>
 
-  <!-- 采购入库 -->
-  <div class="card">
-    <h2>采购入库</h2>
-    <div class="row">
-      <label>供应商:</label>
-      <select id="poSupplier"></select>
-      <input id="poNewSupplier" placeholder="新供应商名(可选)">
-      <button class="gray" onclick="addSupplier()">添加供应商</button>
+    <!-- Tab 导航 -->
+    <div class="tabbar">
+      <button class="tab active" id="tab-overview" onclick="switchTab('overview')">总览</button>
+      <button class="tab" id="tab-product" onclick="switchTab('product')">商品</button>
+      <button class="tab" id="tab-purchase" onclick="switchTab('purchase')">采购</button>
+      <button class="tab" id="tab-sale" onclick="switchTab('sale')">销售</button>
+      <button class="tab" id="tab-stock" onclick="switchTab('stock')">流水</button>
+      <button class="tab" id="tab-report" onclick="switchTab('report')">报表</button>
+      <button class="tab" id="tab-log" onclick="switchTab('log')">日志</button>
     </div>
-    <div class="row">
-      <label>商品:</label>
-      <select id="poProduct"></select>
-      <input id="poQty" placeholder="数量" type="number" value="10">
-      <input id="poPrice" placeholder="进价(自动带出)" type="number" step="0.01">
-      <button onclick="doPurchase()">采购入库</button>
-      <span id="purchaseMsg"></span>
-    </div>
-  </div>
 
-  <!-- 销售出库 -->
-  <div class="card">
-    <h2>销售出库</h2>
-    <div class="row">
-      <label>客户:</label>
-      <input id="soCustomer" placeholder="客户名称">
-      <label>商品:</label>
-      <select id="soProduct"></select>
-      <input id="soQty" placeholder="数量" type="number" value="1">
-      <input id="soPrice" placeholder="售价(自动带出)" type="number" step="0.01">
-      <button onclick="doSale()">销售出库</button>
-      <span id="saleMsg"></span>
+    <!-- 总览 -->
+    <div class="panel active" id="panel-overview">
+      <div class="card">
+        <div class="card-head">
+          <h2>经营总览</h2>
+          <div class="card-actions">
+            <button class="btn ghost" onclick="loadOverview()">刷新数据</button>
+            <span class="tag">数据来自你的真实业务</span>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">日销趋势</div>
+            <div id="chartTrend" class="chart"></div>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">采购 vs 销售</div>
+            <div id="chartPvs" class="chart"></div>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">商品销量 TOP5</div>
+            <div id="chartTop" class="chart"></div>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">库存分类占比</div>
+            <div id="chartCat" class="chart"></div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- 出入库流水 -->
-  <div class="card">
-    <h2>出入库流水</h2>
-    <div class="row">
-      <button class="gray" onclick="loadRecords()">刷新流水</button>
-      <span class="tag">最近记录在上面</span>
+    <!-- 商品 -->
+    <div class="panel" id="panel-product">
+      <div class="card">
+        <div class="card-head">
+          <h2>商品管理</h2>
+          <div class="card-actions">
+            <input id="searchName" placeholder="按名称搜索">
+            <button class="btn" onclick="loadProducts()">搜索</button>
+            <button class="btn ghost" onclick="loadProductOptions()">刷新商品下拉</button>
+            <span class="tag">库存低于预警线标红</span>
+            <span id="productMsg"></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>名称</th><th>条码</th><th>分类</th><th>规格</th><th>单位</th><th>进价</th><th>售价</th><th>库存</th><th>预警线</th><th>状态</th></tr></thead>
+            <tbody id="productBody"></tbody>
+          </table>
+        </div>
+        <div class="card-head" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);"><h2>新增商品</h2></div>
+        <div class="form">
+          <div class="form-row"><label>名称</label><input id="pName" placeholder="名称"></div>
+          <div class="form-row"><label>条码</label><input id="pBarcode" placeholder="条码"></div>
+          <div class="form-row"><label>分类</label><select id="pCategory"></select></div>
+          <div class="form-row"><label>规格</label><input id="pSpec" placeholder="规格"></div>
+          <div class="form-row"><label>单位</label><input id="pUnit" placeholder="单位"></div>
+          <div class="form-row"><label>进价</label><input id="pPurchase" placeholder="进价" type="number" step="0.01"></div>
+          <div class="form-row"><label>售价</label><input id="pSale" placeholder="售价" type="number" step="0.01"></div>
+          <div class="form-row"><label>预警阈值</label><input id="pWarn" placeholder="预警阈值" type="number"></div>
+          <div class="form-actions"><button class="btn" onclick="addProduct()">新增商品</button></div>
+        </div>
+      </div>
     </div>
-    <table>
-      <thead><tr><th>时间</th><th>商品</th><th>类型</th><th>数量</th><th>变动后库存</th><th>业务</th></tr></thead>
-      <tbody id="recordBody"></tbody>
-    </table>
-  </div>
 
-  <!-- 报表 -->
-  <div class="card">
-    <h2>报表统计</h2>
-    <div class="row">
-      <button class="gray" onclick="loadReports()">刷新报表</button>
+    <!-- 采购 -->
+    <div class="panel" id="panel-purchase">
+      <div class="card">
+        <div class="card-head">
+          <h2>采购入库</h2>
+          <span id="purchaseMsg"></span>
+        </div>
+        <div class="form">
+          <div class="form-row"><label>供应商</label><select id="poSupplier"></select></div>
+          <div class="form-row"><label>新供应商</label><input id="poNewSupplier" placeholder="供应商名（可选）"><button class="btn ghost" onclick="addSupplier()">添加供应商</button></div>
+          <div class="form-row"><label>商品</label><select id="poProduct"></select></div>
+          <div class="form-row"><label>数量</label><input id="poQty" placeholder="数量" type="number" value="10"></div>
+          <div class="form-row"><label>进价</label><input id="poPrice" placeholder="自动带出" type="number" step="0.01"></div>
+          <div class="form-actions"><button class="btn" onclick="doPurchase()">采购入库</button></div>
+        </div>
+      </div>
     </div>
-    <div id="profitInfo"></div>
-    <table>
-      <thead><tr><th>日期</th><th>单数</th><th>销售额</th></tr></thead>
-      <tbody id="reportBody"></tbody>
-    </table>
-  </div>
 
-  <!-- 操作日志 -->
-  <div class="card">
-    <h2>操作日志</h2>
-    <div class="row">
-      <button class="gray" onclick="loadLogs()">刷新日志</button>
-      <span class="tag">采购/销售等操作会自动记录</span>
+    <!-- 销售 -->
+    <div class="panel" id="panel-sale">
+      <div class="card">
+        <div class="card-head">
+          <h2>销售出库</h2>
+          <span id="saleMsg"></span>
+        </div>
+        <div class="form">
+          <div class="form-row"><label>客户名称</label><input id="soCustomer" placeholder="客户名称"></div>
+          <div class="form-row"><label>商品</label><select id="soProduct"></select></div>
+          <div class="form-row"><label>数量</label><input id="soQty" placeholder="数量" type="number" value="1"></div>
+          <div class="form-row"><label>售价</label><input id="soPrice" placeholder="自动带出" type="number" step="0.01"></div>
+          <div class="form-actions"><button class="btn" onclick="doSale()">销售出库</button></div>
+        </div>
+      </div>
     </div>
-    <table>
-      <thead><tr><th>时间</th><th>操作人</th><th>操作描述</th><th>方法</th><th>IP</th></tr></thead>
-      <tbody id="logBody"></tbody>
-    </table>
-  </div>
+
+    <!-- 流水 -->
+    <div class="panel" id="panel-stock">
+      <div class="card">
+        <div class="card-head">
+          <h2>出入库流水</h2>
+          <div class="card-actions">
+            <button class="btn ghost" onclick="loadRecords()">刷新流水</button>
+            <span class="tag">最新在上面</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>时间</th><th>商品</th><th>类型</th><th>数量</th><th>变动后库存</th><th>业务</th></tr></thead>
+            <tbody id="recordBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 报表 -->
+    <div class="panel" id="panel-report">
+      <div class="card">
+        <div class="card-head">
+          <h2>报表统计</h2>
+          <div class="card-actions">
+            <button class="btn ghost" onclick="loadReports()">刷新报表</button>
+          </div>
+        </div>
+        <div id="profitInfo"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>日期</th><th>单数</th><th>销售额</th></tr></thead>
+            <tbody id="reportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日志 -->
+    <div class="panel" id="panel-log">
+      <div class="card">
+        <div class="card-head">
+          <h2>操作日志</h2>
+          <div class="card-actions">
+            <button class="btn ghost" onclick="loadLogs()">刷新日志</button>
+            <span class="tag">采购/销售自动记录</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>时间</th><th>操作人</th><th>操作描述</th><th>方法</th><th>IP</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /app -->
 
 </main>
 
+<div id="toastWrap"></div>
+
+<!-- 客服窗口 -->
+<div id="chatFab" onclick="toggleChat()" title="进销存客服">💬</div>
+<div id="chatPanel" style="display:none">
+  <div class="chat-head"><span>智能客服</span><button class="chat-close" onclick="toggleChat()">×</button></div>
+  <div class="chat-body" id="chatBody">
+    <div class="chat-msg bot">你好，我是进销存系统客服，可以问我采购、销售、库存、报表、毛利等问题。</div>
+  </div>
+  <div class="chat-input-row">
+    <input id="chatInput" placeholder="问点进销存的事..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn" onclick="sendChat()">发送</button>
+  </div>
+</div>
+
 <script>
 // ========== 公共工具 ==========
-// 登录后带上 token + 当前用户
+function toast(text, type) {
+  type = type || 'info';
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = text;
+  document.getElementById('toastWrap').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 320); }, 2600);
+}
 function authHeaders() {
   const h = { 'Content-Type': 'application/json' };
-  if (token) h['Authorization'] = 'Bearer ' + token;   // 拦截器验这个
-  if (currentUser) {
-    h['X-User-Id'] = currentUser.id;                    // 操作日志用
-    h['X-User-Name'] = currentUser.username;
-  }
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  if (currentUser) { h['X-User-Id'] = currentUser.id; h['X-User-Name'] = currentUser.username; }
   return h;
 }
-function handleSessionExpired() {
-  alert('登录已过期，请重新登录');
-  logout();
-}
+function handleSessionExpired() { toast('登录已过期，请重新登录', 'err'); logout(); }
 async function get(url) {
   const r = await fetch(url, { headers: authHeaders() });
   const j = await r.json();
-  if (j.code !== 1) {
-    if (j.msg === '未登录') handleSessionExpired();
-    throw new Error(j.msg);
-  }
+  if (j.code !== 1) { if (j.msg === '未登录') handleSessionExpired(); throw new Error(j.msg); }
   return j.data;
 }
 async function post(url, body) {
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(body)
-  });
+  const r = await fetch(url, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
   const j = await r.json();
-  if (j.code !== 1) {
-    if (j.msg === '未登录') handleSessionExpired();
-    throw new Error(j.msg);
-  }
+  if (j.code !== 1) { if (j.msg === '未登录') handleSessionExpired(); throw new Error(j.msg); }
   return j.data;
 }
 function v(id) { return document.getElementById(id).value.trim(); }
@@ -204,60 +546,83 @@ function msg(id, text, isErr) {
 }
 function fmtDate(v) {
   if (!v) return '';
-  if (typeof v === 'number') {
-    const d = new Date(v);
-    const p = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  }
+  if (typeof v === 'number') { const d = new Date(v); const p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
   return String(v).replace('T', ' ');
 }
+function dateKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
-let catMap = {};   // 分类id -> 分类名
+let catMap = {};
+let products = [];
 
 // ========== 登录门禁 ==========
-let currentUser = null;   // 当前登录用户
-let token = null;         // 登录 token
+let currentUser = null;
+let token = null;
+const ROLE_NAMES = {1:'管理员', 2:'采购员', 3:'销售员', 4:'库管'};
 
 async function doLogin() {
   const username = v('loginUser');
   const password = v('loginPass');
-  if (!username || !password) return alert('请输入用户名和密码');
+  if (!username || !password) return toast('请输入用户名和密码', 'err');
   try {
-    const data = await post('/user/login', { username: username, password: password });
+    const data = await post('/user/login', { username, password });
     currentUser = data.user;
-    token = data.token;   // 存 token, 以后每个请求都带
-    // 登录成功: 隐藏登录框, 显示主内容
-    document.getElementById('loginCard').style.display = 'none';
+    token = data.token;
+    document.getElementById('loginWrap').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    document.getElementById('session').style.display = 'flex';
     document.getElementById('welcomeText').textContent =
-      '欢迎，' + (data.user.realName || data.user.username) + '（角色ID: ' + data.user.roleId + '）';
-    await enterApp();   // 登录后才加载数据
-  } catch (e) {
-    msg('loginMsg', '登录失败: ' + e.message, true);
-  }
+      (data.user.realName || data.user.username) + ' · ' + (ROLE_NAMES[data.user.roleId] || '');
+    toast('登录成功', 'ok');
+    applyRole();
+    switchTab('overview');
+    await enterApp();
+  } catch (e) { msg('loginMsg', '登录失败: ' + e.message, true); }
 }
 function logout() {
-  // 通知后端删 token(失败也无所谓)
   try { fetch('/user/logout', { method: 'POST', headers: authHeaders() }); } catch (e) {}
-  currentUser = null;
-  token = null;
-  document.getElementById('loginCard').style.display = 'block';
+  currentUser = null; token = null;
+  document.getElementById('loginWrap').style.display = 'grid';
   document.getElementById('app').style.display = 'none';
+  document.getElementById('session').style.display = 'none';
   document.getElementById('loginPass').value = '';
   msg('loginMsg', '');
+  toast('已退出登录', 'info');
+}
+function canDo(section) {
+  const r = currentUser ? currentUser.roleId : null;
+  const map = { 'purchase':[1,2], 'sale':[1,3], 'stock':[1,4], 'report':[1,3,4], 'log':[1] };
+  return (map[section] || []).includes(r);
+}
+function applyRole() {
+  document.getElementById('tab-purchase').style.display = canDo('purchase') ? '' : 'none';
+  document.getElementById('tab-sale').style.display = canDo('sale') ? '' : 'none';
+  document.getElementById('tab-stock').style.display = canDo('stock') ? '' : 'none';
+  document.getElementById('tab-report').style.display = canDo('report') ? '' : 'none';
+  document.getElementById('tab-log').style.display = canDo('log') ? '' : 'none';
+}
+function switchTab(name) {
+  const names = ['overview','product','purchase','sale','stock','report','log'];
+  names.forEach(p => {
+    const panel = document.getElementById('panel-' + p);
+    const tab = document.getElementById('tab-' + p);
+    if (panel) panel.classList.toggle('active', p === name);
+    if (tab) tab.classList.toggle('active', p === name);
+  });
+  // 回到总览时图表容器可能尺寸变化, 让 ECharts 重新适配
+  if (name === 'overview') setTimeout(() => Object.values(charts).forEach(c => c && c.resize()), 60);
 }
 async function enterApp() {
   try {
     await loadCategories();
-    await loadSuppliers();
+    if (canDo('purchase')) await loadSuppliers();
     await loadProducts();
-    await loadProductOptions();
-    await loadRecords();
-    await loadReports();
-    await loadLogs();
-  } catch (e) {
-    alert('数据加载出错: ' + e.message);
-  }
+    if (canDo('purchase') || canDo('sale')) await loadProductOptions();
+    if (canDo('stock')) await loadRecords();
+    if (canDo('report')) await loadReports();
+    if (canDo('log')) await loadLogs();
+    await loadOverview();
+  } catch (e) { toast('数据加载出错: ' + e.message, 'err'); }
 }
 
 // ========== 分类 / 供应商 ==========
@@ -275,12 +640,12 @@ async function loadSuppliers() {
 }
 async function addSupplier() {
   const name = v('poNewSupplier');
-  if (!name) return alert('请输入供应商名称');
+  if (!name) return toast('请输入供应商名称', 'err');
   try {
-    await post('/supplier/add', { name: name });
-    alert('供应商添加成功');
+    await post('/supplier/add', { name });
+    toast('供应商添加成功', 'ok');
     await loadSuppliers();
-  } catch (e) { alert('添加失败: ' + e.message); }
+  } catch (e) { toast('添加失败: ' + e.message, 'err'); }
 }
 
 // ========== 商品 ==========
@@ -288,30 +653,27 @@ async function loadProducts() {
   try {
     const name = v('searchName');
     const data = await get('/product/list?name=' + encodeURIComponent(name));
-    const tb = document.getElementById('productBody');
-    tb.innerHTML = data.map(p => {
+    products = data;
+    document.getElementById('productBody').innerHTML = data.map(p => {
       const low = p.stock < p.warningThreshold;
       return `<tr>
-        <td>${p.id}</td><td>${p.name}</td><td>${p.barcode || ''}</td>
+        <td>${p.id}</td><td><b>${p.name}</b></td><td>${p.barcode || ''}</td>
         <td>${catMap[p.categoryId] || p.categoryId || '-'}</td>
         <td>${p.spec || ''}</td><td>${p.unit || ''}</td>
         <td>${p.purchasePrice}</td><td>${p.salePrice}</td>
         <td class="${low ? 'warn' : ''}">${p.stock}</td>
         <td>${p.warningThreshold}</td>
-        <td>${p.status === 1 ? '在售' : '下架'}</td>
+        <td>${p.status === 1 ? '<span class="badge ok">在售</span>' : '<span class="badge muted">下架</span>'}</td>
       </tr>`;
-    }).join('') || '<tr><td colspan="11" style="text-align:center">暂无商品</td></tr>';
+    }).join('') || '<tr><td colspan="11" class="empty">暂无商品</td></tr>';
   } catch (e) { msg('productMsg', '加载失败: ' + e.message, true); }
 }
 async function loadProductOptions() {
   const data = await get('/product/list');
   const po = document.getElementById('poProduct');
   const so = document.getElementById('soProduct');
-  const html = data.map(p =>
-    `<option value="${p.id}" data-purchase="${p.purchasePrice}" data-sale="${p.salePrice}">${p.name} (库存${p.stock})</option>`
-  ).join('');
-  po.innerHTML = html;
-  so.innerHTML = html;
+  const html = data.map(p => `<option value="${p.id}" data-purchase="${p.purchasePrice}" data-sale="${p.salePrice}">${p.name} (库存${p.stock})</option>`).join('');
+  po.innerHTML = html; so.innerHTML = html;
   syncPrice();
 }
 function syncPrice() {
@@ -321,13 +683,10 @@ function syncPrice() {
   document.getElementById('soPrice').value = so ? so.dataset.sale : '';
 }
 async function addProduct() {
-  const body = {
-    name: v('pName'), barcode: v('pBarcode'), categoryId: num('pCategory'),
-    spec: v('pSpec'), unit: v('pUnit'),
-    purchasePrice: num('pPurchase'), salePrice: num('pSale'),
-    warningThreshold: num('pWarn')
-  };
-  if (!body.name) return alert('请填写商品名称');
+  const body = { name: v('pName'), barcode: v('pBarcode'), categoryId: num('pCategory'),
+    spec: v('pSpec'), unit: v('pUnit'), purchasePrice: num('pPurchase'), salePrice: num('pSale'),
+    warningThreshold: num('pWarn') };
+  if (!body.name) return toast('请填写商品名称', 'err');
   try {
     await post('/product/add', body);
     msg('productMsg', '新增成功');
@@ -337,28 +696,24 @@ async function addProduct() {
 
 // ========== 采购 / 销售 ==========
 async function doPurchase() {
-  const body = {
-    supplierId: num('poSupplier'),
-    details: [{ productId: num('poProduct'), quantity: num('poQty'), price: num('poPrice') }]
-  };
-  if (!body.supplierId) return alert('请先添加/选择供应商');
-  if (!body.details[0].productId) return alert('请选择商品');
+  const body = { supplierId: num('poSupplier'),
+    details: [{ productId: num('poProduct'), quantity: num('poQty'), price: num('poPrice') }] };
+  if (!body.supplierId) return toast('请先添加/选择供应商', 'err');
+  if (!body.details[0].productId) return toast('请选择商品', 'err');
   try {
     await post('/purchaseOrder/create', body);
-    msg('purchaseMsg', '采购入库成功! 库存已增加');
-    loadProducts(); loadProductOptions(); loadRecords();
+    toast('采购入库成功', 'ok');
+    loadProducts(); loadProductOptions(); loadRecords(); loadOverview();
   } catch (e) { msg('purchaseMsg', '采购失败: ' + e.message, true); }
 }
 async function doSale() {
-  const body = {
-    customerName: v('soCustomer'),
-    details: [{ productId: num('soProduct'), quantity: num('soQty'), price: num('soPrice') }]
-  };
-  if (!body.details[0].productId) return alert('请选择商品');
+  const body = { customerName: v('soCustomer'),
+    details: [{ productId: num('soProduct'), quantity: num('soQty'), price: num('soPrice') }] };
+  if (!body.details[0].productId) return toast('请选择商品', 'err');
   try {
     await post('/saleOrder/sale', body);
-    msg('saleMsg', '销售出库成功! 库存已减少');
-    loadProducts(); loadProductOptions(); loadRecords();
+    toast('销售出库成功', 'ok');
+    loadProducts(); loadProductOptions(); loadRecords(); loadOverview();
   } catch (e) { msg('saleMsg', '销售失败: ' + e.message, true); }
 }
 
@@ -368,48 +723,171 @@ async function loadRecords() {
     const data = await get('/stockRecord/list');
     document.getElementById('recordBody').innerHTML = data.map(r => `<tr>
       <td>${fmtDate(r.createTime)}</td>
-      <td>${r.productName || r.productId}</td>
-      <td>${r.type === 1 ? '入库' : '出库'}</td>
-      <td>${r.quantity}</td>
-      <td>${r.afterStock}</td>
-      <td>${r.bizType}</td>
-    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">暂无流水</td></tr>';
-  } catch (e) { /* 忽略 */ }
+      <td><b>${r.productName || r.productId}</b></td>
+      <td>${r.type === 1 ? '<span class="badge in">入库</span>' : '<span class="badge out">出库</span>'}</td>
+      <td>${r.quantity}</td><td>${r.afterStock}</td><td>${r.bizType}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">暂无流水</td></tr>';
+  } catch (e) {}
 }
 
 // ========== 报表 ==========
 async function loadReports() {
   try {
     const sale = await get('/saleOrder/voByDay');
-    document.getElementById('reportBody').innerHTML = sale.map(r => `<tr>
-      <td>${r.day}</td><td>${r.orderCount}</td><td>${r.totalAmount}</td>
-    </tr>`).join('') || '<tr><td colspan="3" style="text-align:center">暂无销售数据</td></tr>';
+    document.getElementById('reportBody').innerHTML = sale.map(r =>
+      `<tr><td>${r.day}</td><td>${r.orderCount}</td><td>${r.totalAmount}</td></tr>`).join('')
+      || '<tr><td colspan="3" class="empty">暂无销售数据</td></tr>';
     const p = await get('/saleOrderDetail/profit');
     document.getElementById('profitInfo').innerHTML =
-      `销售额 <b>${p.revenue}</b> | 成本 <b>${p.cost}</b> | 毛利 <b style="color:#27ae60">${p.profit}</b>`;
-  } catch (e) { /* 忽略 */ }
+      `销售额 <b>${p.revenue}</b> <span class="green">毛利 ${p.profit}</span>`;
+  } catch (e) {}
 }
 
-// ========== 操作日志 ==========
+// ========== 日志 ==========
 async function loadLogs() {
   try {
     const data = await get('/operationLog/list');
     document.getElementById('logBody').innerHTML = data.map(o => `<tr>
-      <td>${fmtDate(o.createTime)}</td>
-      <td>${o.username || '-'}</td>
-      <td>${o.module || ''}</td>
-      <td>${o.action || ''}</td>
-      <td>${o.ip || '-'}</td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">暂无日志</td></tr>';
-  } catch (e) { /* 忽略 */ }
+      <td>${fmtDate(o.createTime)}</td><td>${o.username || '-'}</td>
+      <td>${o.module || ''}</td><td>${o.action || ''}</td><td>${o.ip || '-'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="empty">暂无日志</td></tr>';
+  } catch (e) {}
+}
+
+// ========== KPI + 图表 ==========
+let charts = {};
+function countUp(el, target, isMoney) {
+  const dur = 800, start = performance.now();
+  function step(t) {
+    const p = Math.min(1, (t - start) / dur);
+    const val = Math.round(target * (1 - Math.pow(1 - p, 3)));
+    el.textContent = (isMoney ? '¥' : '') + val.toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function renderKpi(todaySale, totalStock, warnCount, profit) {
+  countUp(document.getElementById('kpiSale'), todaySale, true);
+  countUp(document.getElementById('kpiStock'), totalStock, false);
+  countUp(document.getElementById('kpiWarn'), warnCount, false);
+  countUp(document.getElementById('kpiProfit'), profit, true);
+}
+async function loadOverview() {
+  try {
+    const [trend, pvs, top, cat, profit] = await Promise.all([
+      get('/report/saleTrend'),
+      get('/report/purchaseVsSale'),
+      get('/report/topProducts'),
+      get('/report/categoryStock'),
+      get('/saleOrderDetail/profit')
+    ]);
+    const today = dateKey(new Date());
+    const todaySale = Number((trend.find(t => t.day === today) || {}).amount || 0);
+    const totalStock = products.reduce((s, p) => s + (p.stock || 0), 0);
+    const warnCount = products.filter(p => (p.stock || 0) < p.warningThreshold).length;
+    renderKpi(todaySale, totalStock, warnCount, Number(profit.profit || 0));
+
+    const axis = { axisLine: { lineStyle: { color: 'rgba(154,163,189,.25)' } },
+      axisLabel: { color: '#9aa3bd' }, axisTick: { show: false } };
+    const split = { splitLine: { lineStyle: { color: 'rgba(154,163,189,.07)' } }, axisLabel: { color: '#9aa3bd' } };
+
+    // 1 日销趋势折线
+    charts.trend = echarts.init(document.getElementById('chartTrend'));
+    charts.trend.setOption({
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      grid: { left: 44, right: 16, top: 20, bottom: 26 },
+      xAxis: { type: 'category', data: trend.map(t => t.day), ...axis },
+      yAxis: { type: 'value', ...split },
+      series: [{
+        name: '销售额', type: 'line', smooth: true, symbolSize: 6, data: trend.map(t => t.amount),
+        lineStyle: { width: 3, color: '#4f7cff', shadowColor: 'rgba(79,124,255,.7)', shadowBlur: 14 },
+        itemStyle: { color: '#4f7cff', borderColor: '#fff', borderWidth: 1 },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[
+          { offset: 0, color: 'rgba(79,124,255,.4)' }, { offset: 1, color: 'rgba(79,124,255,0)' }]) }
+      }]
+    });
+
+    // 2 采购 vs 销售 柱状(同轴: 都是金额)
+    charts.pvs = echarts.init(document.getElementById('chartPvs'));
+    charts.pvs.setOption({
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      legend: { data: ['采购', '销售'], textStyle: { color: '#9aa3bd' }, top: 0 },
+      grid: { left: 44, right: 16, top: 34, bottom: 26 },
+      xAxis: { type: 'category', data: pvs.map(p => p.day), ...axis },
+      yAxis: { type: 'value', ...split },
+      series: [
+        { name: '采购', type: 'bar', barWidth: 12, data: pvs.map(p => p.purchaseAmount || 0),
+          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#8b5cf6'},{offset:1,color:'rgba(139,92,246,.35)'}]) } },
+        { name: '销售', type: 'bar', barWidth: 12, data: pvs.map(p => p.saleAmount || 0),
+          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#22d3ee'},{offset:1,color:'rgba(34,211,238,.3)'}]) } }
+      ]
+    });
+
+    // 3 商品 TOP5 条形
+    charts.top = echarts.init(document.getElementById('chartTop'));
+    charts.top.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      grid: { left: 60, right: 30, top: 10, bottom: 24 },
+      xAxis: { type: 'value', ...split },
+      yAxis: { type: 'category', data: top.map(t => t.name).reverse(), ...axis },
+      series: [{ type: 'bar', data: top.map(t => t.amount).reverse(), barWidth: 14,
+        itemStyle: { borderRadius: [0,6,6,0], color: new echarts.graphic.LinearGradient(0,0,1,0,[
+          { offset: 0, color: 'rgba(79,124,255,.25)' }, { offset: 1, color: '#4f7cff' }]) } }]
+    });
+
+    // 4 库存分类环形
+    charts.cat = echarts.init(document.getElementById('chartCat'));
+    const catColors = ['#4f7cff','#8b5cf6','#22d3ee','#e879f9','#34d399','#fbbf24'];
+    charts.cat.setOption({
+      tooltip: { trigger: 'item', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      legend: { orient: 'vertical', right: 6, top: 'center', textStyle: { color: '#9aa3bd' }, itemWidth: 10, itemHeight: 10 },
+      color: catColors,
+      series: [{
+        type: 'pie', radius: ['42%', '70%'], center: ['40%', '50%'],
+        avoidLabelOverlap: true, label: { color: '#9aa3bd', formatter: '{b} {d}%' },
+        itemStyle: { borderColor: '#0b0e14', borderWidth: 2 },
+        data: cat.map((c, i) => ({ name: c.name || '未分类', value: c.stock, itemStyle: { color: catColors[i % catColors.length] } }))
+      }]
+    });
+  } catch (e) { toast('总览加载失败: ' + e.message, 'err'); }
 }
 
 // 选择商品自动带出价格
 document.getElementById('poProduct').addEventListener('change', syncPrice);
 document.getElementById('soProduct').addEventListener('change', syncPrice);
+// 回车登录
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+// 窗口变化时图表自适应
+window.addEventListener('resize', () => Object.values(charts).forEach(c => c && c.resize()));
 
-// ========== 初始化 ==========
-// 页面默认停在登录界面; 登录成功后在 enterApp() 里才加载数据
+// ========== 智能客服 ==========
+function toggleChat() {
+  const p = document.getElementById('chatPanel');
+  const show = p.style.display === 'none' || p.style.display === '';
+  p.style.display = show ? 'flex' : 'none';
+  if (show) document.getElementById('chatInput').focus();
+}
+function appendMsg(text, who) {
+  const body = document.getElementById('chatBody');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + who;
+  div.textContent = text;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendMsg(text, 'user');
+  try {
+    const data = await post('/chat', { message: text });
+    appendMsg(data, 'bot');
+  } catch (e) {
+    appendMsg('出错了: ' + e.message, 'bot');
+  }
+}
 </script>
 </body>
 </html>
