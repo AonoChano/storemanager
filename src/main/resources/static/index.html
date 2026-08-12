@@ -217,6 +217,17 @@
   .picker-row .p-meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
   .picker-row .p-meta em { font-style: normal; color: var(--ok); }
   .picker-row .p-meta b { color: var(--warn); }
+  /* 供应商行内编辑 */
+  .picker-row .picker-edit { flex-shrink: 0; background: none; border: none; padding: 4px;
+    color: var(--faint); cursor: pointer; border-radius: 6px; display: grid; place-items: center; opacity: 0; transition: all .15s; }
+  .picker-row:hover .picker-edit { opacity: 1; }
+  .picker-edit:hover { color: var(--accent); background: var(--row-hover); opacity: 1; }
+  .picker-row.editing { cursor: default; }
+  .picker-row.editing .picker-edit { opacity: 1; }
+  .picker-edit-btns { flex-shrink: 0; display: flex; gap: 2px; }
+  .supplier-edit-input { flex: 1; min-width: 0; padding: 5px 9px; font-size: 13px;
+    border: 1px solid var(--accent); border-radius: 6px; outline: none;
+    background: var(--input-bg); color: var(--text); }
   .picker-empty { text-align: center; color: var(--faint); padding: 30px 0; font-size: 13px; }
   .picker-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); }
 
@@ -942,6 +953,12 @@ async function post(url, body) {
   if (j.code !== 1) { if (j.msg === '未登录') handleSessionExpired(); throw new Error(j.msg); }
   return j.data;
 }
+async function put(url, body) {
+  const r = await fetch(url, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+  const j = await r.json();
+  if (j.code !== 1) { if (j.msg === '未登录') handleSessionExpired(); throw new Error(j.msg); }
+  return j.data;
+}
 function v(id) { return document.getElementById(id).value.trim(); }
 function num(id) { const x = document.getElementById(id).value; return x === '' ? null : Number(x); }
 function msg(id, text, isErr) {
@@ -1084,12 +1101,59 @@ function renderSupplierList(filter) {
     document.getElementById('supplierCount').textContent = '0 个供应商';
     return;
   }
+  const esc = t => String(t || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   list.innerHTML = items.map(s => `
-    <div class="picker-row" onclick="pickSupplier(${s.id})">
-      <span class="p-name">${kw ? s.name.replace(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<b>$1</b>') : s.name}</span>
+    <div class="picker-row" onclick="if(!this.classList.contains('editing'))pickSupplier(${s.id})">
+      <span class="p-name">${kw ? esc(s.name.replace(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<b>$1</b>')) : esc(s.name)}</span>
       <span class="p-meta">ID ${s.id}</span>
+      <button class="picker-edit" title="编辑" onclick="event.stopPropagation();startEditSupplier(${s.id}, this)"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></button>
     </div>`).join('');
   document.getElementById('supplierCount').textContent = items.length + ' 个供应商';
+}
+
+// 行内编辑供应商名称(编辑态: 名称变输入框 + 保存/取消)
+function startEditSupplier(id, btn) {
+  const row = btn.closest('.picker-row');
+  if (row.classList.contains('editing')) return;
+  const s = suppliers.find(x => x.id === id);
+  if (!s) return;
+  const esc = t => String(t || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  row.classList.add('editing');
+  row.querySelector('.p-name').outerHTML = `<input class="supplier-edit-input" value="${esc(s.name)}" maxlength="50" spellcheck="false">`;
+  row.querySelector('.p-meta').style.display = 'none';
+  const btns = document.createElement('span');
+  btns.className = 'picker-edit-btns';
+  btns.innerHTML = `
+    <button class="picker-edit ok" title="保存" onclick="event.stopPropagation();saveEditSupplier(${id}, this.parentElement.parentElement.querySelector('.supplier-edit-input'))"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+    <button class="picker-edit cancel" title="取消" onclick="event.stopPropagation();cancelEditSupplier(${id})"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
+  btn.replaceWith(btns);
+  const inp = row.querySelector('.supplier-edit-input');
+  inp.addEventListener('click', e => e.stopPropagation());
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.stopPropagation(); saveEditSupplier(id, inp); }
+    else if (e.key === 'Escape') { e.stopPropagation(); cancelEditSupplier(id); }
+  });
+  inp.focus(); inp.select();
+}
+
+function cancelEditSupplier() {
+  renderSupplierList(document.getElementById('supplierSearch').value);
+}
+
+async function saveEditSupplier(id, inputEl) {
+  const name = inputEl.value.trim();
+  if (!name) return toast('供应商名称不能为空', 'err');
+  const old = (suppliers.find(s => s.id === id) || {}).name;
+  if (name === old) { cancelEditSupplier(); return; }
+  try {
+    await put('/supplier/update', { id, name });
+    toast('修改成功', 'ok');
+    // 采购单当前若正使用该供应商, 同步更新显示名(避免提交时按旧名查不到 id)
+    if (document.getElementById('poSupplierInput').value === old) {
+      document.getElementById('poSupplierInput').value = name;
+    }
+    await loadSuppliers();
+  } catch (e) { toast('修改失败: ' + friendlyError(e), 'err'); }
 }
 
 function pickSupplier(id) {
