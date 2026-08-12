@@ -5,9 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 · 进销存管理系统</title>
     <!-- 字体已本地化(static/fonts/), 不依赖 Google Fonts 网络 -->
+    <script>
+        // 主题优先应用(防闪烁): localStorage > 跟随系统
+        (function () {
+            var pref = localStorage.getItem('storemanager_theme') || 'system';
+            var resolved = pref === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : pref;
+            document.documentElement.dataset.theme = resolved;
+            document.documentElement.dataset.themePref = pref;
+        })();
+    </script>
 
     <style>
-        /* ===== 本地字体(latin 子集, 离线可用) ===== */
+        /* ===== 主题变量: 亮(默认) / 暗(黑白银系) ===== */
+        :root {
+            --paper-bg: #f4efd8;
+            --paper-light: #fbf9ec;
+            --ink-dark: #2c2824;
+            --ink-deep-espresso: #2c1e14;
+            --ink-light: #5c5549;
+            --stamp-red: #8b3a3a;
+            --accent-gold: #b87324;
+            --border-amber: rgba(139, 126, 102, 0.3);
+            --shadow-color: rgba(44, 40, 36, 0.15);
+            --texture-vignette: rgba(139, 126, 102, 0.08);
+            --texture-lines: rgba(0, 0, 0, 0.015);
+            --ambient: rgba(255, 255, 255, 0.45);
+            --card-inset: rgba(255, 255, 255, 0.6);
+            --input-line: rgba(44, 40, 36, 0.3);
+            --placeholder: rgba(92, 85, 73, 0.4);
+            --btn-hover: #1a1714;
+        }
+
+        [data-theme="dark"] {
+            --paper-bg: #0d0d0f;
+            --paper-light: #17171a;
+            --ink-dark: #e9e7e2;
+            --ink-deep-espresso: #f0ede6;
+            --ink-light: #9a978f;
+            --stamp-red: #c05f5f;
+            --accent-gold: #c9a05e;
+            --border-amber: rgba(233, 231, 226, 0.16);
+            --shadow-color: rgba(0, 0, 0, 0.55);
+            --texture-vignette: rgba(255, 255, 255, 0.03);
+            --texture-lines: rgba(255, 255, 255, 0.018);
+            --ambient: rgba(255, 255, 255, 0.06);
+            --card-inset: rgba(255, 255, 255, 0.05);
+            --input-line: rgba(233, 231, 226, 0.28);
+            --placeholder: rgba(154, 151, 143, 0.5);
+            --btn-hover: #d8d5cc;
+        }
         @font-face { font-family: 'Architects Daughter'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/architects-daughter-400.woff2) format('woff2'); }
         @font-face { font-family: 'Cabin Sketch'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/cabin-sketch-700.woff2) format('woff2'); }
         @font-face { font-family: 'Playfair Display'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/playfair-display-400.woff2) format('woff2'); }
@@ -39,10 +87,10 @@
             height: 100vh;
             overflow: hidden;
             background-color: var(--paper-bg);
-            /* 羊皮纸纹理与微弱渐变 */
+            /* 纸张纹理与微弱渐变(主题变量驱动) */
             background-image:
-                radial-gradient(circle at 50% 50%, transparent 20%, rgba(139, 126, 102, 0.08) 100%),
-                repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
+                radial-gradient(circle at 50% 50%, transparent 20%, var(--texture-vignette) 100%),
+                repeating-linear-gradient(45deg, transparent, transparent 2px, var(--texture-lines) 2px, var(--texture-lines) 4px);
             font-family: 'Playfair Display', serif;
             font-size: 16px;
             color: var(--ink-dark);
@@ -50,6 +98,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         #desktop-container {
@@ -81,9 +130,10 @@
             left: -10%;
             width: 70vw;
             height: 70vw;
-            background: radial-gradient(circle, rgba(255,255,255,0.45) 0%, transparent 65%);
+            background: radial-gradient(circle, var(--ambient) 0%, transparent 65%);
             z-index: 2;
             pointer-events: none;
+            transition: background 0.3s ease;
         }
 
         /* 右侧登录栏：伪装成档案登记卡 */
@@ -99,9 +149,10 @@
             flex-direction: column;
             justify-content: center;
             box-shadow: -15px 0 40px var(--shadow-color),
-                        -1px 0 0 rgba(255,255,255,0.6) inset;
+                        -1px 0 0 var(--card-inset) inset;
             border-left: 1px solid var(--border-amber);
             cursor: auto;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
         }
 
         .card-header {
@@ -142,7 +193,7 @@
             width: 100%;
             background: transparent;
             border: none;
-            border-bottom: 1px solid rgba(44, 40, 36, 0.3);
+            border-bottom: 1px solid var(--input-line);
             padding: 0.5rem 0;
             font-family: 'Playfair Display', serif;
             font-size: 1.15rem;
@@ -157,7 +208,7 @@
 
         .form-group input::placeholder {
             font-style: italic;
-            color: rgba(92, 85, 73, 0.4);
+            color: var(--placeholder);
             font-size: 0.95rem;
         }
 
@@ -184,7 +235,7 @@
         }
 
         .submit-btn:hover {
-            background: #1a1714;
+            background: var(--btn-hover);
             transform: translateY(1px);
         }
 
@@ -218,7 +269,55 @@
             z-index: 10;
         }
 
-        /* 音效开关(纯图标喇叭, 适应复古档案风格) */
+        /* 主题切换(左上角: 太阳/月亮/跟随系统) */
+        .theme-switch {
+            position: absolute;
+            top: 24px;
+            left: 28px;
+            z-index: 20;
+            display: flex;
+            gap: 8px;
+            background: rgba(251, 249, 236, 0.85);
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid var(--border-amber);
+            box-shadow: 0 4px 14px var(--shadow-color);
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        [data-theme="dark"] .theme-switch {
+            background: rgba(23, 23, 26, 0.85);
+        }
+
+        .theme-switch button {
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            background: transparent;
+            color: var(--ink-light);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: all 0.2s;
+        }
+
+        .theme-switch button svg { display: block; }
+
+        .theme-switch button:hover {
+            color: var(--ink-dark);
+            border-color: var(--border-amber);
+        }
+
+        .theme-switch button.active {
+            color: var(--ink-dark);
+            background: var(--ink-dark);
+            border-color: var(--ink-dark);
+        }
+
+        .theme-switch button.active svg { stroke: var(--paper-light); }
+
         .btn-sound {
             pointer-events: auto;
             background: transparent;
@@ -267,7 +366,7 @@
             .archive-card {
                 width: 100%;
                 box-shadow: none;
-                background-color: rgba(251, 249, 236, 0.95);
+                background-color: var(--paper-light);
             }
         }
     </style>
@@ -276,6 +375,27 @@
 
 <div id="desktop-container">
     <div class="ambient-lighting"></div>
+
+    <!-- 主题切换: 亮色 / 暗色 / 跟随系统 -->
+    <div class="theme-switch" id="themeSwitch" role="group" aria-label="主题切换">
+        <button data-theme="light" title="亮色主题" aria-label="亮色主题">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+                <circle cx="8" cy="8" r="3.2"/>
+                <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1"/>
+            </svg>
+        </button>
+        <button data-theme="dark" title="暗色主题" aria-label="暗色主题">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13.2 9.6A5.8 5.8 0 0 1 6.4 2.8 5.8 5.8 0 1 0 13.2 9.6z"/>
+            </svg>
+        </button>
+        <button data-theme="system" title="跟随系统" aria-label="跟随系统">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1.5" y="2.5" width="13" height="9" rx="1"/>
+                <path d="M5.5 14.5h5M8 11.5v3"/>
+            </svg>
+        </button>
+    </div>
 
     <div class="hint-text">
         <button class="btn-sound active" id="soundBtn" type="button" title="音效: 开" aria-label="音效开关">
@@ -391,13 +511,34 @@
         soundBtn.title = soundEnabled ? '音效: 开' : '音效: 关';
     });
 
-    // Color definitions corresponding to parchment & dark sepia ink
-    const colors = {
-        ink: 'rgba(44, 40, 36, 0.8)',
-        inkLight: 'rgba(92, 85, 73, 0.25)',
-        highlight: 'rgba(139, 58, 58, 0.65)',
-        grid: 'rgba(139, 126, 102, 0.08)'
+    // 两套画布配色: 亮(羊皮纸档案) / 暗(黑白银系, 手写体白色)
+    const THEMES = {
+        light: {
+            clear: '#f4efd8',
+            grid: 'rgba(139, 126, 102, 0.08)',
+            ink: 'rgba(44, 40, 36, 0.8)',
+            inkLight: 'rgba(92, 85, 73, 0.25)',
+            highlight: 'rgba(139, 58, 58, 0.65)',
+            edgeRgb: '92, 85, 73',
+            letterDraft: 'rgba(90, 52, 26, 0.45)',
+            letterFill: '#2c1e14',
+            letterStroke: '#5a341a',
+            haloRgb: '184, 115, 36'
+        },
+        dark: {
+            clear: '#0d0d0f',
+            grid: 'rgba(255, 255, 255, 0.05)',
+            ink: 'rgba(233, 231, 226, 0.8)',
+            inkLight: 'rgba(154, 151, 143, 0.3)',
+            highlight: 'rgba(192, 95, 95, 0.65)',
+            edgeRgb: '154, 151, 143',
+            letterDraft: 'rgba(233, 231, 226, 0.38)',
+            letterFill: '#f0ede6',
+            letterStroke: '#b9b5ac',
+            haloRgb: '201, 160, 94'
+        }
     };
+    let colors = THEMES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
 
     // 单个字符类 (Machinarium 手绘草稿风格 + 弹簧阻尼)
     class Letter {
@@ -499,7 +640,7 @@
 
             // 1. 悬停时的琥珀金草稿光晕 (Hover draft halo)
             if (jitter > 0.1) {
-                ctx.strokeStyle = `rgba(184, 115, 36, ${0.4 * jitter})`;
+                ctx.strokeStyle = `rgba(${colors.haloRgb}, ${0.4 * jitter})`;
                 ctx.lineWidth = 2;
                 for (let i = 0; i < 2; i++) {
                     const ox = (noise(seed + i * 10) - 0.5) * 8 * jitter;
@@ -508,16 +649,16 @@
                 }
             }
 
-            // 2. 底层深棕色浓墨抖动描边 (Deep Brown Draft Stroke)
-            ctx.strokeStyle = 'rgba(90, 52, 26, 0.45)';
+            // 2. 底层浓墨抖动描边 (Draft Stroke)
+            ctx.strokeStyle = colors.letterDraft;
             ctx.lineWidth = 3.5;
             const ox1 = (noise(seed + 1) - 0.5) * 2.5 * (0.35 + jitter * 0.65);
             const oy1 = (noise(seed + 2) - 0.5) * 2.5 * (0.35 + jitter * 0.65);
             ctx.strokeText(this.char, ox1, oy1);
 
-            // 3. 顶层主字体：深咖啡浓墨色 (#2c1e14) 与富赭色边缘 (#5a341a)
-            ctx.fillStyle = '#2c1e14';
-            ctx.strokeStyle = '#5a341a';
+            // 3. 顶层主字体: 深色主题下为白色手写体
+            ctx.fillStyle = colors.letterFill;
+            ctx.strokeStyle = colors.letterStroke;
             ctx.lineWidth = 1.8;
 
             const ox2 = (noise(seed + 3) - 0.5) * 1.5 * (0.35 + jitter * 0.65);
@@ -592,7 +733,7 @@
             ctx.lineDashOffset = this.drawProgress * 80;
 
             const alpha = Math.max(0, 1 - (this.a.x / (window.innerWidth || 1000)) * 1.3);
-            ctx.strokeStyle = `rgba(92, 85, 73, ${0.35 * alpha})`;
+            ctx.strokeStyle = `rgba(${colors.edgeRgb}, ${0.35 * alpha})`;
             ctx.lineWidth = 0.7;
 
             ctx.stroke();
@@ -729,7 +870,7 @@
         mouse.py = mouse.y;
 
         // 不透明清屏: 消除半透明拖尾残影, 视觉干净且减少混合开销
-        ctx.fillStyle = '#f4efd8';
+        ctx.fillStyle = colors.clear;
         ctx.fillRect(0, 0, width, height);
 
         // 1. 绘制网格与底纹测绘节点
@@ -819,6 +960,42 @@
         mouse.x = -9999;
         mouse.y = -9999;
     });
+
+    // ========== 主题切换: 亮 / 暗 / 跟随系统 ==========
+    const themeBtns = document.querySelectorAll('#themeSwitch button');
+
+    function syncThemeButtons() {
+        const pref = document.documentElement.dataset.themePref || 'system';
+        themeBtns.forEach(b => b.classList.toggle('active', b.dataset.theme === pref));
+    }
+
+    function applyTheme() {
+        const pref = document.documentElement.dataset.themePref || 'system';
+        const resolved = pref === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : pref;
+        document.documentElement.dataset.theme = resolved;
+        colors = THEMES[resolved];
+        syncThemeButtons();
+        // 立即重绘一帧, 画布换色无需等下一帧动画
+        ctx.fillStyle = colors.clear;
+        ctx.fillRect(0, 0, width, height);
+    }
+
+    themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.documentElement.dataset.themePref = btn.dataset.theme;
+            localStorage.setItem('storemanager_theme', btn.dataset.theme);
+            applyTheme();
+        });
+    });
+
+    // 跟随系统模式下, 系统主题变化时实时切换
+    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    themeMedia.addEventListener('change', () => {
+        if (document.documentElement.dataset.themePref === 'system') applyTheme();
+    });
+    syncThemeButtons();
 
     // ========== 登录接入 ==========
     const loginForm = document.getElementById('loginForm');
