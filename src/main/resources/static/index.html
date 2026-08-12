@@ -486,6 +486,9 @@
     transition: all .18s;
   }
   .chat-send svg { display: block; }
+  /* 有内容可发送: 白色填充 + 黑色箭头(明确的可点击信号) */
+  .chat-send:not(:disabled) { background: #fff; color: #000; }
+  /* hover: 琥珀填充 + 白色箭头高光 */
   .chat-send:not(:disabled):hover { background: var(--accent); color: #fff; transform: scale(1.05); }
   .chat-send:not(:disabled):active { transform: scale(.94); }
   .chat-send.stopping { background: var(--err); color: #fff; }
