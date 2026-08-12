@@ -43,9 +43,7 @@
     position: sticky; top: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 26px;
-    background: rgba(5, 6, 10, 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(5, 6, 10, 0.92);
     border-bottom: 1px solid var(--border);
   }
   .brand { display: flex; align-items: center; gap: 12px; }
@@ -100,10 +98,11 @@
   /* ===== 登录 ===== */
   .login-wrap { min-height: 62dvh; display: grid; place-items: center; }
   #loginCard {
-    width: 100%; max-width: 360px; padding: 34px 30px;
-    background: var(--surface); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--border); border-radius: 18px;
-    box-shadow: 0 12px 36px rgba(0,0,0,.35);
+    width: 100%; max-width: 360px; padding: 30px 6px;
+    background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+    border: none; border-radius: 0;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    box-shadow: none;
   }
   #loginCard h2 { margin: 0 0 24px; text-align: center; font-size: 25px; letter-spacing: -.01em; color: var(--text); }
   .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
@@ -117,14 +116,14 @@
   .form-actions { display: flex; gap: 10px; padding-left: 134px; }
   .hint { margin-top: 15px; font-size: 12px; color: var(--faint); text-align: center; }
 
-  /* ===== KPI ===== */
-  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+  /* ===== KPI(无盒子, 竖线分隔) ===== */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-bottom: 18px;
+    border-bottom: 1px solid var(--border); padding-bottom: 18px; }
   .kpi {
-    position: relative; overflow: hidden;
-    background: rgba(255,255,255,.03);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 18px 20px;
+    padding: 2px 20px;
   }
+  .kpi:first-child { padding-left: 0; }
+  .kpi + .kpi { border-left: 1px solid var(--border); }
   .kpi-label { font-size: 12px; color: var(--dim); letter-spacing: .03em; }
   .kpi-num { margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -.01em;
     font-variant-numeric: tabular-nums; }
@@ -133,37 +132,41 @@
   .kpi-num.amber { color: #ffd28a; }
   .kpi-num.green { color: #7fe3b4; }
 
-  /* ===== Tab ===== */
+  /* ===== Tab(下划线式) ===== */
   .tabbar {
-    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 18px;
-    padding: 5px; background: rgba(19,24,38,.6); border: 1px solid var(--border);
-    border-radius: 12px;
+    display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 18px;
+    padding: 0; background: transparent; border: none; border-radius: 0;
+    border-bottom: 1px solid var(--border);
   }
   .tab {
-    padding: 8px 18px; border: none; border-radius: 8px; background: transparent;
+    padding: 9px 2px; border: none; border-radius: 0; background: transparent;
     color: var(--dim); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
-    transition: all .2s;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color .2s, border-color .2s;
   }
   .tab:hover { color: var(--text); }
   .tab.active {
-    color: #fff;
-    background: rgba(79,124,255,.16);
-    box-shadow: inset 0 0 0 1px rgba(79,124,255,.35);
+    color: var(--text);
+    background: transparent;
+    box-shadow: none;
+    border-bottom-color: var(--blue);
   }
 
-  /* ===== 面板/卡片 ===== */
+  /* ===== 面板/卡片(布线风: 无容器, 分隔线划分区块) ===== */
   .panel { display: none; }
   .panel.active { display: block; animation: fadeUp .35s ease; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   .card {
-    background: var(--surface); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 20px 22px; margin-bottom: 18px;
+    background: transparent;
+    border: none; border-radius: 0;
+    padding: 22px 0; margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
   }
+  .panel > .card:last-child { border-bottom: none; }
   .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-  .card-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .01em;
-    display: flex; align-items: center; gap: 10px; }
-  .card-head h2::before { content: ""; width: 3px; height: 16px; border-radius: 2px;
+  .card-head h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .02em;
+    display: flex; align-items: center; gap: 10px; color: var(--text); }
+  .card-head h2::before { content: ""; width: 3px; height: 14px; border-radius: 1px;
     background: var(--blue); }
   .card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -249,6 +252,10 @@
 
   @media (max-width: 860px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .kpi { padding: 12px 16px; }
+    .kpi:first-child { padding-left: 16px; }
+    .kpi + .kpi { border-left: none; }
+    .kpi:nth-child(odd) { border-right: 1px solid var(--border); }
     .chart-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 560px) {
