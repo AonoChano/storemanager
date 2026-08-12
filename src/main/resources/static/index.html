@@ -607,8 +607,9 @@ let catMap = {};
 let products = [];
 
 // ========== 登录门禁 ==========
+// 会话持久化: token/user 存 localStorage, 刷新不掉线; 无会话时由启动逻辑跳转独立登录页 login.html
 let currentUser = null;
-let token = null;
+let token = localStorage.getItem('storemanager_token');
 const ROLE_NAMES = {1:'管理员', 2:'采购员', 3:'销售员', 4:'库管'};
 
 async function doLogin() {
@@ -619,6 +620,8 @@ async function doLogin() {
     const data = await post('/user/login', { username, password });
     currentUser = data.user;
     token = data.token;
+    localStorage.setItem('storemanager_token', token);
+    localStorage.setItem('storemanager_user', JSON.stringify(currentUser));
     document.getElementById('loginWrap').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('session').style.display = 'flex';
@@ -633,12 +636,9 @@ async function doLogin() {
 function logout() {
   try { fetch('/user/logout', { method: 'POST', headers: authHeaders() }); } catch (e) {}
   currentUser = null; token = null;
-  document.getElementById('loginWrap').style.display = 'grid';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('session').style.display = 'none';
-  document.getElementById('loginPass').value = '';
-  msg('loginMsg', '');
-  toast('已退出登录', 'info');
+  localStorage.removeItem('storemanager_token');
+  localStorage.removeItem('storemanager_user');
+  location.replace('/login.html');
 }
 function canDo(section) {
   const r = currentUser ? currentUser.roleId : null;
@@ -927,6 +927,28 @@ document.getElementById('poProduct').addEventListener('change', syncPrice);
 document.getElementById('soProduct').addEventListener('change', syncPrice);
 // 回车登录
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ========== 启动: 有本地会话直接进入, 否则跳转独立登录页(login.html) ==========
+(async function boot() {
+  if (!token) { location.replace('/login.html'); return; }
+  try {
+    currentUser = JSON.parse(localStorage.getItem('storemanager_user') || 'null');
+    if (!currentUser || !currentUser.id) throw new Error('no user');
+  } catch (e) {
+    localStorage.removeItem('storemanager_token');
+    localStorage.removeItem('storemanager_user');
+    location.replace('/login.html');
+    return;
+  }
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('session').style.display = 'flex';
+  document.getElementById('welcomeText').textContent =
+    (currentUser.realName || currentUser.username) + ' · ' + (ROLE_NAMES[currentUser.roleId] || '');
+  applyRole();
+  switchTab('overview');
+  await enterApp();
+})();
 // 窗口变化时图表自适应
 window.addEventListener('resize', () => Object.values(charts).forEach(c => c && c.resize()));
 

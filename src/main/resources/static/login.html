@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 · 进销存管理系统</title>
+    <!-- 引入 Google 手绘与古典字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Cabin+Sketch:wght@700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --paper-bg: #f4efd8;
+            --paper-light: #fbf9ec;
+            --ink-dark: #2c2824;
+            --ink-deep-espresso: #2c1e14;
+            --ink-light: #5c5549;
+            --stamp-red: #8b3a3a;
+            --accent-gold: #b87324;
+            --border-amber: rgba(139, 126, 102, 0.3);
+            --shadow-color: rgba(44, 40, 36, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--paper-bg);
+            /* 羊皮纸纹理与微弱渐变 */
+            background-image:
+                radial-gradient(circle at 50% 50%, transparent 20%, rgba(139, 126, 102, 0.08) 100%),
+                repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
+            font-family: 'Playfair Display', serif;
+            color: var(--ink-dark);
+        }
+
+        #desktop-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 动画与交互画布 */
+        #vintage-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        /* Ambient Lighting Gradient Overlay */
+        .ambient-lighting {
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 70vw;
+            height: 70vw;
+            background: radial-gradient(circle, rgba(255,255,255,0.45) 0%, transparent 65%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 右侧登录栏：伪装成档案登记卡 */
+        .archive-card {
+            position: relative;
+            z-index: 10;
+            width: 380px;
+            height: 100vh;
+            margin-left: auto;
+            background-color: var(--paper-light);
+            padding: 4rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: -15px 0 40px var(--shadow-color),
+                        -1px 0 0 rgba(255,255,255,0.6) inset;
+            border-left: 1px solid var(--border-amber);
+        }
+
+        .card-header {
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .card-header h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-header p {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--ink-light);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--ink-light);
+            margin-bottom: 0.3rem;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(44, 40, 36, 0.3);
+            padding: 0.5rem 0;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            color: var(--ink-dark);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-bottom-color: var(--ink-dark);
+        }
+
+        .form-group input::placeholder {
+            font-style: italic;
+            color: rgba(92, 85, 73, 0.4);
+            font-size: 0.9rem;
+        }
+
+        .login-error {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--stamp-red);
+            margin-bottom: 1rem;
+        }
+
+        .submit-btn {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--ink-dark);
+            color: var(--paper-light);
+            border: none;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .submit-btn:hover {
+            background: #1a1714;
+            transform: translateY(1px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .card-footer {
+            margin-top: auto;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--ink-light);
+            text-align: center;
+            opacity: 0.75;
+            line-height: 1.5;
+        }
+
+        .hint-text {
+            position: absolute;
+            bottom: 20px;
+            left: 28px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--ink-light);
+            pointer-events: none;
+            opacity: 0.6;
+            z-index: 10;
+        }
+
+        @media (max-width: 900px) {
+            .archive-card {
+                width: 100%;
+                box-shadow: none;
+                background-color: rgba(251, 249, 236, 0.95);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="desktop-container">
+    <div class="ambient-lighting"></div>
+
+    <div class="hint-text">✎ 在左侧手绘文字上移动鼠标触发物理挤压与墨水抖动效果</div>
+
+    <!-- 兼具背景测绘图与手绘弹力字体的画布 -->
+    <canvas id="vintage-canvas"></canvas>
+
+    <!-- 右侧档案卡 (StoreManager 登录) -->
+    <div class="archive-card">
+        <div class="card-header">
+            <h1>登录</h1>
+            <p>StoreManager 进销存管理系统</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label>账号</label>
+                <input type="text" id="username" placeholder="请输入账号" autocomplete="username" required>
+            </div>
+
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password" required>
+            </div>
+
+            <div class="login-error" id="loginError" hidden></div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">登 录</button>
+        </form>
+
+        <div class="card-footer">
+            <p>进销存管理系统 · 采购 / 销售 / 库存 / 报表</p>
+            <p>默认账号 admin / 123456</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('vintage-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // 字号固定为最大, 弹性固定为最小(原概念稿的控制栏已移除)
+    const FONT_SIZE = 140;
+    const ELASTICITY = 1;
+
+    let dpr = window.devicePixelRatio || 1;
+    let width, height;
+    let mouse = { x: -9999, y: -9999, px: -9999, py: -9999, speed: 0 };
+    let letters = [];
+    let nodes = [];
+    let edges = [];
+    let time = 0;
+    let frame = 0;
+
+    // Color definitions corresponding to parchment & dark sepia ink
+    const colors = {
+        ink: 'rgba(44, 40, 36, 0.8)',
+        inkLight: 'rgba(92, 85, 73, 0.25)',
+        highlight: 'rgba(139, 58, 58, 0.65)',
+        grid: 'rgba(139, 126, 102, 0.08)'
+    };
+
+    // 单个字符类 (Machinarium 手绘草稿风格 + 弹簧阻尼)
+    class Letter {
+        constructor(char, x, y, fontSize) {
+            this.char = char;
+            this.baseX = x;
+            this.baseY = y;
+            this.x = x;
+            this.y = y;
+
+            this.vx = 0;
+            this.vy = 0;
+
+            this.scaleX = 1;
+            this.scaleY = 1;
+            this.vScaleX = 0;
+            this.vScaleY = 0;
+
+            this.rotation = 0;
+            this.vRotation = 0;
+
+            this.fontSize = fontSize;
+            this.hoverAmount = 0;
+            this.seed = Math.random() * 1000;
+        }
+
+        update(elasticityFactor) {
+            const dx = mouse.x - this.x;
+            const dy = mouse.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxDist = this.fontSize * 1.25;
+
+            if (dist < maxDist) {
+                const force = (1 - dist / maxDist);
+                const angle = Math.atan2(dy, dx);
+
+                // 推开力
+                const push = force * 22 * elasticityFactor;
+                this.vx -= Math.cos(angle) * push;
+                this.vy -= Math.sin(angle) * push;
+
+                // 挤压变形
+                this.vScaleX += force * 0.12 * (Math.random() > 0.5 ? 1 : -1);
+                this.vScaleY += force * 0.12 * (Math.random() > 0.5 ? 1 : -1);
+
+                // 扭转力
+                this.vRotation += (Math.random() - 0.5) * force * 0.18;
+
+                this.hoverAmount = Math.min(1, this.hoverAmount + 0.15);
+            } else {
+                this.hoverAmount = Math.max(0, this.hoverAmount - 0.05);
+            }
+
+            // 弹簧阻尼模型
+            const stiffness = 0.08;
+            const damping = 0.75;
+
+            // 位置复位
+            const fx = (this.baseX - this.x) * stiffness;
+            const fy = (this.baseY - this.y) * stiffness;
+            this.vx = (this.vx + fx) * damping;
+            this.vy = (this.vy + fy) * damping;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // 缩放复位
+            const fsx = (1 - this.scaleX) * stiffness;
+            const fsy = (1 - this.scaleY) * stiffness;
+            this.vScaleX = (this.vScaleX + fsx) * damping;
+            this.vScaleY = (this.vScaleY + fsy) * damping;
+            this.scaleX += this.vScaleX;
+            this.scaleY += this.vScaleY;
+
+            // 旋转复位
+            const fr = (0 - this.rotation) * stiffness;
+            this.vRotation = (this.vRotation + fr) * damping;
+            this.rotation += this.vRotation;
+        }
+
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation);
+            ctx.scale(this.scaleX, this.scaleY);
+
+            ctx.font = `700 ${this.fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 静止时文字保持稳定: 抖动偏移固定, 仅在悬停时随 hoverAmount 增强
+            const seed = this.seed;
+            const jitter = this.hoverAmount;
+            const noise = (s) => (Math.sin(s * 9999) * 10000) % 1;
+
+            // 1. 悬停时的琥珀金草稿光晕 (Hover draft halo)
+            if (jitter > 0.1) {
+                ctx.strokeStyle = `rgba(184, 115, 36, ${0.4 * jitter})`;
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 2; i++) {
+                    const ox = (noise(seed + i * 10) - 0.5) * 8 * jitter;
+                    const oy = (noise(seed + i * 20) - 0.5) * 8 * jitter;
+                    ctx.strokeText(this.char, ox, oy);
+                }
+            }
+
+            // 2. 底层深棕色浓墨抖动描边 (Deep Brown Draft Stroke)
+            ctx.strokeStyle = 'rgba(90, 52, 26, 0.45)';
+            ctx.lineWidth = 3.5;
+            const ox1 = (noise(seed + 1) - 0.5) * 2.5 * (0.35 + jitter * 0.65);
+            const oy1 = (noise(seed + 2) - 0.5) * 2.5 * (0.35 + jitter * 0.65);
+            ctx.strokeText(this.char, ox1, oy1);
+
+            // 3. 顶层主字体：深咖啡浓墨色 (#2c1e14) 与富赭色边缘 (#5a341a)
+            ctx.fillStyle = '#2c1e14';
+            ctx.strokeStyle = '#5a341a';
+            ctx.lineWidth = 1.8;
+
+            const ox2 = (noise(seed + 3) - 0.5) * 1.5 * (0.35 + jitter * 0.65);
+            const oy2 = (noise(seed + 4) - 0.5) * 1.5 * (0.35 + jitter * 0.65);
+
+            ctx.fillText(this.char, ox2, oy2);
+            ctx.strokeText(this.char, ox2, oy2);
+
+            ctx.restore();
+        }
+    }
+
+    // 背景古典测绘节点与连线
+    class Node {
+        constructor(x, y, isPrimary) {
+            this.baseX = x;
+            this.baseY = y;
+            this.phase = Math.random() * Math.PI * 2;
+            this.radius = isPrimary ? 3.5 : 2;
+            this.isPrimary = isPrimary;
+        }
+
+        update(t) {
+            this.x = this.baseX + Math.sin(this.phase + t * 0.5) * 12;
+            this.y = this.baseY + Math.cos(this.phase + t * 0.4) * 12;
+        }
+
+        draw(ctx) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.isPrimary ? colors.highlight : colors.ink;
+            ctx.fill();
+
+            if (this.isPrimary) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 2.8, 0, Math.PI * 2);
+                ctx.strokeStyle = colors.inkLight;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+        }
+    }
+
+    class Edge {
+        constructor(nodeA, nodeB) {
+            this.a = nodeA;
+            this.b = nodeB;
+            this.cpOffset = (Math.random() - 0.5) * 80;
+            this.drawProgress = Math.random();
+        }
+
+        draw(ctx) {
+            const dx = this.b.x - this.a.x;
+            const dy = this.b.y - this.a.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 350) return;
+
+            const midX = (this.a.x + this.b.x) / 2;
+            const midY = (this.a.y + this.b.y) / 2;
+            const angle = Math.atan2(dy, dx);
+            const cpX = midX + Math.cos(angle + Math.PI / 2) * this.cpOffset;
+            const cpY = midY + Math.sin(angle + Math.PI / 2) * this.cpOffset;
+
+            this.drawProgress -= 0.0015;
+
+            ctx.beginPath();
+            ctx.moveTo(this.a.x, this.a.y);
+            ctx.quadraticCurveTo(cpX, cpY, this.b.x, this.b.y);
+
+            ctx.setLineDash([3, 5]);
+            ctx.lineDashOffset = this.drawProgress * 80;
+
+            const alpha = Math.max(0, 1 - (this.a.x / (window.innerWidth || 1000)) * 1.3);
+            ctx.strokeStyle = `rgba(92, 85, 73, ${0.35 * alpha})`;
+            ctx.lineWidth = 0.7;
+
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // 初始化测绘图与节点
+    function initGraph() {
+        nodes = [];
+        edges = [];
+
+        const nodeCount = Math.floor((width * height) / 28000);
+        for (let i = 0; i < nodeCount; i++) {
+            const x = Math.random() * (width * 0.65); // 避开右侧档案卡
+            const y = Math.random() * height;
+            const isPrimary = Math.random() > 0.85;
+            nodes.push(new Node(x, y, isPrimary));
+        }
+
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                const dx = nodes[i].baseX - nodes[j].baseX;
+                const dy = nodes[i].baseY - nodes[j].baseY;
+                if (dx * dx + dy * dy < 35000) {
+                    if (Math.random() > 0.45) {
+                        edges.push(new Edge(nodes[i], nodes[j]));
+                    }
+                }
+            }
+        }
+    }
+
+    // 布局两行手绘交互文字
+    function layoutLetters() {
+        letters = [];
+        const line1 = "STORE";
+        const line2 = "MANAGER";
+        const fontSize = FONT_SIZE;
+
+        ctx.font = `700 ${fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
+
+        const isMobile = window.innerWidth <= 900;
+        const leftAreaWidth = isMobile ? window.innerWidth : (window.innerWidth - 380);
+        const centerX = leftAreaWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const lineHeight = fontSize * 1.15;
+
+        const lines = [line1, line2];
+        const totalHeight = lineHeight * (lines.length - 1);
+        const startY = centerY - totalHeight / 2;
+
+        lines.forEach((text, lineIdx) => {
+            let totalWidth = 0;
+            const letterWidths = [];
+
+            for (let i = 0; i < text.length; i++) {
+                const w = ctx.measureText(text[i]).width;
+                letterWidths.push(w);
+                totalWidth += w;
+            }
+
+            let currentX = centerX - totalWidth / 2;
+            const currentY = startY + lineIdx * lineHeight;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const w = letterWidths[i];
+                const x = currentX + w / 2;
+
+                letters.push(new Letter(char, x, currentY, fontSize));
+                currentX += w;
+            }
+        });
+    }
+
+    // 绘制古典比例尺网格
+    function drawGrid(ctx) {
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 1;
+        const gridSize = 100;
+
+        ctx.beginPath();
+        for (let x = 0; x < width; x += gridSize) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+        }
+        for (let y = 0; y < height; y += gridSize) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = colors.inkLight;
+        ctx.lineWidth = 0.5;
+        const marks = [
+            { x: 40, y: 40 },
+            { x: 40, y: height - 40 },
+            { x: width * 0.55, y: 40 },
+            { x: width * 0.55, y: height - 40 }
+        ];
+
+        marks.forEach(m => {
+            ctx.beginPath();
+            ctx.moveTo(m.x - 8, m.y); ctx.lineTo(m.x + 8, m.y);
+            ctx.moveTo(m.x, m.y - 8); ctx.lineTo(m.x, m.y + 8);
+            ctx.stroke();
+
+            ctx.fillStyle = colors.inkLight;
+            ctx.font = '9px "Space Mono", monospace';
+            ctx.fillText(`+${m.x.toFixed(0)}`, m.x + 10, m.y + 3);
+        });
+    }
+
+    function resize() {
+        dpr = window.devicePixelRatio || 1;
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        initGraph();
+        layoutLetters();
+    }
+
+    // 渲染循环
+    function animate() {
+        requestAnimationFrame(animate);
+        time += 0.01;
+        frame++;
+
+        // 鼠标移动速度计算
+        const mdx = mouse.x - mouse.px;
+        const mdy = mouse.y - mouse.py;
+        mouse.speed = Math.sqrt(mdx * mdx + mdy * mdy);
+        mouse.px = mouse.x;
+        mouse.py = mouse.y;
+
+        // 羊皮纸微弱余晖清屏
+        ctx.fillStyle = 'rgba(244, 239, 216, 0.35)';
+        ctx.fillRect(0, 0, width, height);
+
+        // 1. 绘制网格与底纹测绘节点
+        drawGrid(ctx);
+        edges.forEach(edge => edge.draw(ctx));
+        nodes.forEach(node => {
+            node.update(time);
+            if (node.x < width * 0.7) {
+                node.draw(ctx);
+            }
+        });
+
+        // 2. 绘制手绘物理弹力文字
+        for (let letter of letters) {
+            letter.update(ELASTICITY);
+            letter.draw();
+        }
+    }
+
+    // 事件监听
+    window.addEventListener('resize', resize);
+
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseleave', () => {
+        mouse.x = -9999;
+        mouse.y = -9999;
+    });
+
+    // Touch Support
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+        mouse.x = -9999;
+        mouse.y = -9999;
+    });
+
+    // ========== 登录接入 ==========
+    const loginForm = document.getElementById('loginForm');
+    const errEl = document.getElementById('loginError');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function showError(msg) {
+        errEl.hidden = false;
+        errEl.textContent = msg;
+    }
+
+    // 把后端/网络原始错误翻译成友好的短提示
+    function friendlyLoginError(m) {
+        const t = String(m || '').replace(/^系统异常[:：]?\s*/, '').split(/\r?\n/)[0].trim();
+        if (t === '用户名不存在!' || t === '密码错误') return '账号或密码错误';
+        if (/数据库|querying database|###/.test(t)) return '服务暂时不可用，请稍后再试';
+        return t || '登录失败，请稍后再试';
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        if (!username || !password) { showError('请输入账号和密码'); return; }
+        errEl.hidden = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '登 录中…';
+        try {
+            const r = await fetch('/user/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const j = await r.json();
+            if (j.code !== 1) throw new Error(j.msg);
+            localStorage.setItem('storemanager_token', j.data.token);
+            localStorage.setItem('storemanager_user', JSON.stringify(j.data.user));
+            location.href = '/';
+        } catch (err) {
+            showError(friendlyLoginError(err.message));
+            submitBtn.disabled = false;
+            submitBtn.textContent = '登 录';
+        }
+    });
+
+    // 确保字体加载完毕后平滑启动
+    document.fonts.ready.then(() => {
+        resize();
+        animate();
+    });
+</script>
+</body>
+</html>
