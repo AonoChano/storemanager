@@ -1964,9 +1964,16 @@ function finalizeBotMsg(el, fullText, opts) {
   opts = opts || {};
   el.classList.remove('chat-thinking', 'chat-think-live');
   el.className = 'chat-msg bot';
-  const contentEl = el.querySelector('.chat-content');
-  if (contentEl) {
-    contentEl.innerHTML = renderMarkdown(fullText);
+  const contentEls = el.querySelectorAll('.chat-content');
+  if (contentEls.length) {
+    const splitAt = (opts.splitAt >= 0) ? opts.splitAt : -1;
+    if (splitAt >= 0 && contentEls.length >= 2) {
+      // 工具调用切割: 工具前正文 / 工具后正文 分段渲染(工具行已在两者之间, 保持中间位置)
+      contentEls[0].innerHTML = renderMarkdown(fullText.slice(0, splitAt));
+      contentEls[1].innerHTML = renderMarkdown(fullText.slice(splitAt));
+    } else {
+      contentEls[0].innerHTML = renderMarkdown(fullText);
+    }
   } else {
     // 非流式路径(错误消息等): 整块渲染
     el.innerHTML = '';
@@ -2069,7 +2076,9 @@ async function sendChat() {
   let thinkFinalized = false;  // 滚筒已定格为折叠块(工具调用/正文出现后, 后续思考只更新折叠内容)
   let toolWrapEl = null;   // 工具调用行容器(首次收到 [TOOL] 时创建)
   const toolNames = [];    // 已展示的工具名(去重)
-  let contentEl = null;    // 正文打字机容器(首次收到正文时创建, 与思考块分离避免重建)
+  let contentEl = null;        // 正文打字机容器(工具调用前/无工具时使用)
+  let bottomContentEl = null;  // 工具调用后的正文容器(插在工具行之后, 保证工具行在正文中间的正确位置)
+  let toolSplitAt = -1;        // 首次工具调用时正文已输出的长度(切割点, -1=未切割)
   const body = document.getElementById('chatBody');
   chatAbort = new AbortController();
   setSendState(true);
@@ -2105,7 +2114,12 @@ async function sendChat() {
           thinkFull += data.slice(7);
           // 滚筒已定格(工具调用/正文之后): 只更新折叠块内容, 保留展开状态
           if (thinkFinalized) {
-            const tb = thinkingEl.querySelector('.chat-think-body');
+            let tb = thinkingEl.querySelector('.chat-think-body');
+            // 思考来得晚(正文先出): 折叠块尚不存在则补插到最前
+            if (!tb && thinkFull) {
+              thinkingEl.insertBefore(createThinkDetails(thinkFull), thinkingEl.firstChild);
+              tb = thinkingEl.querySelector('.chat-think-body');
+            }
             if (tb) tb.textContent = thinkFull;
             continue;
           }
@@ -2134,43 +2148,43 @@ async function sendChat() {
         if (data.startsWith('[TOOL]')) {
           const tname = data.slice(6);
           if (toolNames.includes(tname)) continue;
-          // 工具调用出现: 滚筒定格为折叠块, 建工具行容器(正文前)
+          // 工具调用出现: 定格思考(指示器/滚筒→折叠块), 工具行容器追加在当前已输出正文之后
+          // (不清空已有内容: 工具前的正文保留在工具行上方)
           if (!toolWrapEl) {
-            thinkingEl.classList.remove('chat-thinking', 'chat-think-live');
-            thinkingEl.className = 'chat-msg bot';
-            thinkingEl.innerHTML = '';
-            thinkingEl.appendChild(createThinkDetails(thinkFull));
+            finalizeThinkEl(thinkingEl, thinkFull);
+            thinkLive = null;
+            thinkFinalized = true;
+            toolSplitAt = full.length;   // 切割点: 工具前正文定格, 工具后正文另起容器
             toolWrapEl = document.createElement('div');
             toolWrapEl.className = 'chat-tool-wrap';
             thinkingEl.appendChild(toolWrapEl);
-            thinkLive = null;
-            thinkFinalized = true;
           }
           toolNames.push(tname);
           toolWrapEl.innerHTML = toolNames.map(t => toolRow(t)).join('');
           body.scrollTop = body.scrollHeight;
           continue;
         }
-        // 正文首字到达: 定格思考/工具区, 正文开始打字机
-        if (!contentEl) {
-          thinkingEl.classList.remove('chat-thinking', 'chat-think-live');
-          thinkingEl.className = 'chat-msg bot';
-          if (!toolWrapEl) {
-            // 无工具调用: 折叠块(如有)直接放入
-            thinkingEl.innerHTML = '';
-            if (thinkFull) thinkingEl.appendChild(createThinkDetails(thinkFull));
-          }
-          contentEl = document.createElement('div');
-          contentEl.className = 'chat-content';
-          thinkingEl.appendChild(contentEl);
+        // 正文到达: 工具切割后写次容器(位于工具行之后), 否则写主容器
+        const isPostTool = toolSplitAt >= 0;
+        let targetEl = isPostTool ? bottomContentEl : contentEl;
+        if (!targetEl) {
+          // 首段正文: 定格思考(指示器/滚筒→折叠块), 建正文容器
+          finalizeThinkEl(thinkingEl, thinkFull);
+          thinkLive = null;
+          thinkFinalized = true;
+          targetEl = document.createElement('div');
+          targetEl.className = 'chat-content';
+          thinkingEl.appendChild(targetEl);
+          if (isPostTool) bottomContentEl = targetEl; else contentEl = targetEl;
         }
         full += data;
-        contentEl.textContent = full;  // 纯文本打字机, 避免未闭合 markdown 闪烁
+        // 纯文本打字机, 避免未闭合 markdown 闪烁; 切割后只渲染工具后的部分
+        targetEl.textContent = isPostTool ? full.slice(toolSplitAt) : full;
         body.scrollTop = body.scrollHeight;
       }
     }
     if (!full) throw new Error('AI 没有返回内容');
-    finalizeBotMsg(thinkingEl, full, { think: thinkFull });
+    finalizeBotMsg(thinkingEl, full, { think: thinkFull, splitAt: toolSplitAt });
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: full });
     updateChatClearBtn();
@@ -2178,7 +2192,7 @@ async function sendChat() {
     if (e.name === 'AbortError') {
       if (!full) { thinkingEl.remove(); }
       else {
-        finalizeBotMsg(thinkingEl, full, { think: thinkFull });
+        finalizeBotMsg(thinkingEl, full, { think: thinkFull, splitAt: toolSplitAt });
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: full });
         updateChatClearBtn();
@@ -2202,6 +2216,18 @@ function createThinkDetails(t) {
   d.innerHTML = '<summary>' + THINK_ICON + '<span>思考过程</span></summary><div class="chat-think-body"></div>';
   d.querySelector('.chat-think-body').textContent = t || '';
   return d;
+}
+
+// 思考显示定格: "正在思考"指示器/滚筒 → 折叠块
+// 仅首次过渡时重建(此时尚无正文/工具容器); 已有内容容器时只补缺失的折叠块, 不动已有结构
+function finalizeThinkEl(el, thinkFull) {
+  const wasIndicator = el.classList.contains('chat-thinking') || el.classList.contains('chat-think-live');
+  el.classList.remove('chat-thinking', 'chat-think-live');
+  el.className = 'chat-msg bot';
+  if (wasIndicator) el.innerHTML = '';
+  if (thinkFull && !el.querySelector('.chat-think')) {
+    el.insertBefore(createThinkDetails(thinkFull), el.firstChild);
+  }
 }
 
 // 工具调用行(银灰: 数据库图标 + 工具名下划线, 参考设计稿"搜索结果"行的独立一行效果)
