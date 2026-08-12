@@ -40,13 +40,13 @@
 
         [data-theme="dark"] {
             --paper-bg: #0d0d0f;
-            --paper-light: #17171a;
+            --paper-light: #212126;
             --ink-dark: #e9e7e2;
             --ink-deep-espresso: #f0ede6;
             --ink-light: #9a978f;
             --stamp-red: #c05f5f;
             --accent-gold: #c9a05e;
-            --border-amber: rgba(233, 231, 226, 0.16);
+            --border-amber: rgba(233, 231, 226, 0.22);
             --shadow-color: rgba(0, 0, 0, 0.55);
             --texture-vignette: rgba(255, 255, 255, 0.03);
             --texture-lines: rgba(255, 255, 255, 0.018);
@@ -105,11 +105,22 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
-            justify-content: space-between;
+            gap: clamp(16px, 2.5vw, 40px);
+            padding-right: clamp(28px, 4.5vw, 80px);
             /* 左半画布区使用自定义光标(由 JS 挂载); 右半档案卡恢复系统光标 */
             cursor: none;
+        }
+
+        /* 左半方形画布区: 宽 = 高, 不超出视口 */
+        .login-left {
+            position: relative;
+            width: min(86dvh, 100%);
+            aspect-ratio: 1;
+            justify-self: center;
+            overflow: hidden;
         }
 
         /* 动画与交互画布: 左半区系统光标隐形(自定义光标接管) */
@@ -119,7 +130,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
             cursor: none;
         }
 
@@ -136,13 +146,12 @@
             transition: background 0.3s ease;
         }
 
-        /* 右侧登录栏：伪装成档案登记卡 */
+        /* 右侧登录栏：伪装成档案登记卡(加宽, 右侧留白) */
         .archive-card {
             position: relative;
             z-index: 10;
-            width: 380px;
+            width: min(440px, 34vw);
             height: 100vh;
-            margin-left: auto;
             background-color: var(--paper-light);
             padding: 4rem 3rem;
             display: flex;
@@ -286,7 +295,7 @@
         }
 
         [data-theme="dark"] .theme-switch {
-            background: rgba(23, 23, 26, 0.85);
+            background: rgba(33, 33, 38, 0.85);
         }
 
         .theme-switch button {
@@ -363,8 +372,16 @@
         #customCursor.hidden { display: none; }
 
         @media (max-width: 900px) {
+            #desktop-container {
+                display: block;
+                padding: 0;
+            }
+            .login-left {
+                display: none;
+            }
             .archive-card {
                 width: 100%;
+                height: 100vh;
                 box-shadow: none;
                 background-color: var(--paper-light);
             }
@@ -413,7 +430,10 @@
     </div>
 
     <!-- 兼具背景测绘图与手绘弹力字体的画布 -->
-    <canvas id="vintage-canvas"></canvas>
+    <!-- 左半方形画布区 -->
+    <div class="login-left">
+        <canvas id="vintage-canvas"></canvas>
+    </div>
 
     <!-- 右侧档案卡 (StoreManager 登录) -->
     <div class="archive-card">
@@ -732,7 +752,7 @@
             ctx.setLineDash([3, 5]);
             ctx.lineDashOffset = this.drawProgress * 80;
 
-            const alpha = Math.max(0, 1 - (this.a.x / (window.innerWidth || 1000)) * 1.3);
+            const alpha = Math.max(0, 1 - (this.a.x / (width || 1000)) * 1.3);
             ctx.strokeStyle = `rgba(${colors.edgeRgb}, ${0.35 * alpha})`;
             ctx.lineWidth = 0.7;
 
@@ -741,14 +761,14 @@
         }
     }
 
-    // 初始化测绘图与节点
+    // 初始化测绘图与节点(坐标基于方形画布区, CSS 像素)
     function initGraph() {
         nodes = [];
         edges = [];
 
         const nodeCount = Math.floor((width * height) / 28000);
         for (let i = 0; i < nodeCount; i++) {
-            const x = Math.random() * (width * 0.65); // 避开右侧档案卡
+            const x = Math.random() * width;
             const y = Math.random() * height;
             const isPrimary = Math.random() > 0.85;
             nodes.push(new Node(x, y, isPrimary));
@@ -767,7 +787,7 @@
         }
     }
 
-    // 布局两行手绘交互文字
+    // 布局两行手绘交互文字(基于方形画布区居中)
     function layoutLetters() {
         letters = [];
         const line1 = "STORE";
@@ -777,9 +797,9 @@
         ctx.font = `700 ${fontSize}px 'Cabin Sketch', 'Architects Daughter', cursive`;
 
         const isMobile = window.innerWidth <= 900;
-        const leftAreaWidth = isMobile ? window.innerWidth : (window.innerWidth - 380);
+        const leftAreaWidth = isMobile ? window.innerWidth : width;
         const centerX = leftAreaWidth / 2;
-        const centerY = window.innerHeight / 2;
+        const centerY = height / 2;
         const lineHeight = fontSize * 1.15;
 
         const lines = [line1, line2];
@@ -832,8 +852,8 @@
         const marks = [
             { x: 40, y: 40 },
             { x: 40, y: height - 40 },
-            { x: width * 0.55, y: 40 },
-            { x: width * 0.55, y: height - 40 }
+            { x: width - 40, y: 40 },
+            { x: width - 40, y: height - 40 }
         ];
 
         marks.forEach(m => {
@@ -850,8 +870,13 @@
 
     function resize() {
         dpr = window.devicePixelRatio || 1;
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
+        // canvas 尺寸跟随方形容器, 高分屏按 dpr 缩放保持清晰
+        const rect = canvas.parentElement.getBoundingClientRect();
+        width = Math.max(1, rect.width);
+        height = Math.max(1, rect.height);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         initGraph();
         layoutLetters();
     }
@@ -878,9 +903,7 @@
         edges.forEach(edge => edge.draw(ctx));
         nodes.forEach(node => {
             node.update(time);
-            if (node.x < width * 0.7) {
-                node.draw(ctx);
-            }
+            node.draw(ctx);
         });
 
         // 2. 绘制手绘物理弹力文字
@@ -925,7 +948,8 @@
     // 光标跟随: 仅在左半画布区显示, 右半档案卡(表单)用系统光标
     function updateCursor(x, y) {
         if (!cursorReady) return;
-        const overCard = x > window.innerWidth - 380;
+        const card = document.querySelector('.archive-card').getBoundingClientRect();
+        const overCard = x >= card.left;
         cursorEl.classList.toggle('hidden', overCard);
         if (!overCard) {
             cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
