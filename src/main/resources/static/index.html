@@ -9,17 +9,17 @@
 <script src="echarts.min.js"></script>
 <style>
   :root {
-    --bg: #05060a;
+    --bg: #0a0d12;
     --surface: rgba(19, 24, 38, 0.72);
     --surface-2: rgba(28, 35, 54, 0.85);
-    --border: rgba(139, 156, 255, 0.14);
+    --border: rgba(148, 163, 184, 0.16);
     --text: #e8ecf8;
     --dim: #9aa3bd;
     --faint: #5b6478;
-    --blue: #4f7cff;
-    --violet: #8b5cf6;
+    --blue: #2dd4bf;
+    --violet: #60a5fa;
     --cyan: #22d3ee;
-    --magenta: #e879f9;
+    --magenta: #fb923c;
     --green: #34d399;
     --amber: #fbbf24;
     --red: #fb7185;
@@ -50,8 +50,8 @@
   .logo {
     width: 38px; height: 38px; border-radius: 11px;
     display: grid; place-items: center; font-size: 20px;
-    background: rgba(79,124,255,.16);
-    border: 1px solid rgba(139,156,255,.3);
+    background: rgba(45,212,191,.14);
+    border: 1px solid rgba(148,163,184,.3);
   }
   .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .02em; color: #dfe6f7; }
   .brand .sub { font-size: 11px; color: var(--faint); margin-top: 1px; }
@@ -74,7 +74,7 @@
   .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
   .btn:active { transform: scale(0.96); }
   .btn.ghost { background: transparent; border-color: var(--border); color: var(--dim); }
-  .btn.ghost:hover { color: var(--text); box-shadow: none; border-color: rgba(139,156,255,.4); }
+  .btn.ghost:hover { color: var(--text); box-shadow: none; border-color: rgba(148,163,184,.4); }
 
   /* ===== 输入 ===== */
   input, select {
@@ -83,7 +83,7 @@
     color: var(--text); font-size: 13px; font-family: inherit;
     transition: border-color .2s, box-shadow .2s;
   }
-  input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,124,255,.18); }
+  input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(45,212,191,.16); }
   input { width: 130px; }
   input::placeholder { color: var(--faint); }
   select option { background: #131826; }
@@ -95,8 +95,31 @@
   /* ===== 主区域 ===== */
   main { max-width: 1220px; margin: 0 auto; padding: 24px 22px 60px; }
 
-  /* ===== 登录 ===== */
-  .login-wrap { min-height: 62dvh; display: grid; place-items: center; }
+  /* ===== 登录(分屏: 左概念动画 / 右表单) ===== */
+  .login-wrap { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; }
+  .login-left {
+    position: relative; overflow: hidden; border-right: 1px solid var(--border);
+    display: grid; place-items: center;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 46px 46px;
+  }
+  .login-left::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(560px 340px at 18% 88%, rgba(45,212,191,.10), transparent 65%);
+    pointer-events: none;
+  }
+  .login-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .login-left-text { position: relative; z-index: 1; padding: 0 52px; max-width: 480px; }
+  .login-brand { font-size: 13px; font-weight: 600; letter-spacing: .05em; color: var(--dim); margin-bottom: 20px; }
+  .login-left-text h2 { font-size: 27px; line-height: 1.35; font-weight: 700; letter-spacing: -.01em; margin: 0 0 16px; color: var(--text); }
+  .login-left-text p { font-size: 13.5px; color: var(--dim); margin: 0; }
+  .login-right { display: grid; place-items: center; padding: 40px 24px; }
+  @media (max-width: 900px) {
+    .login-wrap { grid-template-columns: 1fr; }
+    .login-left { display: none; }
+  }
   #loginCard {
     width: 100%; max-width: 360px; padding: 30px 6px;
     background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
@@ -127,8 +150,8 @@
   .kpi-label { font-size: 12px; color: var(--dim); letter-spacing: .03em; }
   .kpi-num { margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -.01em;
     font-variant-numeric: tabular-nums; }
-  .kpi-num.cyan { color: #7fd7ff; }
-  .kpi-num.violet { color: #c4a7ff; }
+  .kpi-num.cyan { color: #5eead4; }
+  .kpi-num.violet { color: #93c5fd; }
   .kpi-num.amber { color: #ffd28a; }
   .kpi-num.green { color: #7fe3b4; }
 
@@ -172,7 +195,11 @@
 
   /* ===== 图表网格 ===== */
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .chart-box { min-width: 0; }
+  .chart-box { min-width: 0; position: relative; }
+  .chart-empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--faint); font-size: 13px; pointer-events: none;
+  }
   .chart-title { font-size: 13px; color: var(--dim); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
   .chart-title::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
     background: var(--blue); }
@@ -186,7 +213,7 @@
   td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.045); white-space: nowrap;
     font-variant-numeric: tabular-nums; }
   tbody tr { transition: background-color .15s; }
-  tbody tr:hover { background: rgba(79,124,255,.06); }
+  tbody tr:hover { background: rgba(45,212,191,.06); }
   tbody tr:last-child td { border-bottom: none; }
   .empty { text-align: center; color: var(--faint); padding: 26px 0 !important; }
 
@@ -220,7 +247,7 @@
     position: fixed; left: 22px; bottom: 22px; z-index: 90;
     width: 52px; height: 52px; border-radius: 50%;
     background: var(--blue);
-    border: 1px solid rgba(139,156,255,.4);
+    border: 1px solid rgba(148,163,184,.4);
     display: grid; place-items: center; font-size: 22px; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,.35);
     transition: transform .18s, filter .18s;
@@ -245,7 +272,7 @@
   .chat-close:hover { color: var(--text); }
   .chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
   .chat-msg { max-width: 82%; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .chat-msg.user { align-self: flex-end; background: rgba(79,124,255,.85); color: #fff; border-bottom-right-radius: 3px; }
+  .chat-msg.user { align-self: flex-end; background: rgba(45,212,191,.85); color: #fff; border-bottom-right-radius: 3px; }
   .chat-msg.bot { align-self: flex-start; background: rgba(255,255,255,.06); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
   .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
   .chat-input-row input { flex: 1; }
@@ -286,19 +313,37 @@
 
   <!-- 登录 -->
   <div class="login-wrap" id="loginWrap">
-    <div id="loginCard">
-      <h2>登录系统</h2>
-      <div class="field">
-        <label>用户名</label>
-        <input id="loginUser" placeholder="请输入用户名" autocomplete="username">
+    <div class="login-left">
+      <svg class="login-scene" viewBox="0 0 640 420" fill="none" aria-hidden="true">
+        <path class="flow-line" d="M0 110 H640" stroke="rgba(45,212,191,.4)" stroke-width="1.5"/>
+        <path class="flow-line slow" d="M0 215 H640" stroke="rgba(96,165,250,.3)" stroke-width="1"/>
+        <path class="flow-line slow2" d="M0 320 H640" stroke="rgba(45,212,191,.25)" stroke-width="1"/>
+        <circle r="4" fill="#2dd4bf"><animateMotion dur="7s" repeatCount="indefinite" path="M-10 110 H650"/></circle>
+        <circle r="3" fill="#60a5fa"><animateMotion dur="11s" repeatCount="indefinite" path="M-10 215 H650"/></circle>
+        <circle r="3" fill="#fbbf24"><animateMotion dur="9s" repeatCount="indefinite" path="M-10 320 H650"/></circle>
+        <circle r="6" fill="none" stroke="#2dd4bf" stroke-width="1" opacity=".45"><animateMotion dur="14s" repeatCount="indefinite" path="M-10 110 H650"/></circle>
+      </svg>
+      <div class="login-left-text">
+        <div class="login-brand">storemanager</div>
+        <h2>商品、库存、账目<br>一处管理</h2>
+        <p>采购入库 / 销售出库 / 库存预警 / 经营报表</p>
       </div>
-      <div class="field">
-        <label>密码</label>
-        <input id="loginPass" placeholder="请输入密码" type="password" autocomplete="current-password">
+    </div>
+    <div class="login-right">
+      <div id="loginCard">
+        <h2>登录系统</h2>
+        <div class="field">
+          <label>用户名</label>
+          <input id="loginUser" placeholder="请输入用户名" autocomplete="username">
+        </div>
+        <div class="field">
+          <label>密码</label>
+          <input id="loginPass" placeholder="请输入密码" type="password" autocomplete="current-password">
+        </div>
+        <span id="loginMsg"></span>
+        <button class="btn" onclick="doLogin()" style="width:100%;">登 录</button>
+        <div class="hint">默认账号 admin / 123456</div>
       </div>
-      <span id="loginMsg"></span>
-      <button class="btn" onclick="doLogin()" style="width:100%;">登 录</button>
-      <div class="hint">默认账号 admin / 123456</div>
     </div>
   </div>
 
@@ -338,18 +383,22 @@
           <div class="chart-box">
             <div class="chart-title">日销趋势</div>
             <div id="chartTrend" class="chart"></div>
+            <div class="chart-empty" id="chartTrendEmpty" hidden></div>
           </div>
           <div class="chart-box">
             <div class="chart-title">采购 vs 销售</div>
             <div id="chartPvs" class="chart"></div>
+            <div class="chart-empty" id="chartPvsEmpty" hidden></div>
           </div>
           <div class="chart-box">
             <div class="chart-title">商品销量 TOP5</div>
             <div id="chartTop" class="chart"></div>
+            <div class="chart-empty" id="chartTopEmpty" hidden></div>
           </div>
           <div class="chart-box">
             <div class="chart-title">库存分类占比</div>
             <div id="chartCat" class="chart"></div>
+            <div class="chart-empty" id="chartCatEmpty" hidden></div>
           </div>
         </div>
       </div>
@@ -759,6 +808,8 @@ async function loadLogs() {
 // ========== KPI + 图表 ==========
 let charts = {};
 function countUp(el, target, isMoney) {
+  // 空数据占位: 无商品时 KPI 显示 --, 不显示无意义的 0
+  if (target === null || target === undefined) { el.textContent = '--'; return; }
   const dur = 800, start = performance.now();
   function step(t) {
     const p = Math.min(1, (t - start) / dur);
@@ -783,14 +834,21 @@ async function loadOverview() {
       get('/report/categoryStock'),
       get('/saleOrderDetail/profit')
     ]);
-    // 空数据占位: 无数据时显示提示而不是空白坐标轴
-    const EMPTY_CHART = msg => ({ graphic: { type: 'text', left: 'center', top: 'middle',
-      style: { text: msg, fill: '#5b6478', fontSize: 13 } } });
+    // 图表空数据占位: DOM 覆盖层, 有数据时隐藏
+    function setChartEmpty(id, empty, msg) {
+      const cover = document.getElementById(id + 'Empty');
+      if (!cover) return;
+      cover.hidden = !empty;
+      if (empty) cover.textContent = msg;
+    }
     const today = dateKey(new Date());
     const todaySale = Number((trend.find(t => t.day === today) || {}).amount || 0);
     const totalStock = products.reduce((s, p) => s + (p.stock || 0), 0);
     const warnCount = products.filter(p => (p.stock || 0) < p.warningThreshold).length;
-    renderKpi(todaySale, totalStock, warnCount, Number(profit.profit || 0));
+    // 还没有任何商品时, KPI 显示占位符 -- 而不是 0
+    const hasData = products.length > 0;
+    renderKpi(hasData ? todaySale : null, hasData ? totalStock : null,
+      hasData ? warnCount : null, hasData ? Number(profit.profit || 0) : null);
 
     const axis = { axisLine: { lineStyle: { color: 'rgba(154,163,189,.25)' } },
       axisLabel: { color: '#9aa3bd' }, axisTick: { show: false } };
@@ -799,58 +857,58 @@ async function loadOverview() {
     // 1 日销趋势折线
     charts.trend = echarts.init(document.getElementById('chartTrend'));
     charts.trend.setOption({
-      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
       grid: { left: 44, right: 16, top: 20, bottom: 26 },
       xAxis: { type: 'category', data: trend.map(t => t.day), ...axis },
       yAxis: { type: 'value', ...split },
       series: [{
         name: '销售额', type: 'line', smooth: true, symbolSize: 6, data: trend.map(t => t.amount),
-        lineStyle: { width: 2.5, color: '#4f7cff' },
-        itemStyle: { color: '#4f7cff', borderColor: '#fff', borderWidth: 1 },
+        lineStyle: { width: 2.5, color: '#2dd4bf' },
+        itemStyle: { color: '#2dd4bf', borderColor: '#fff', borderWidth: 1 },
         areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[
-          { offset: 0, color: 'rgba(79,124,255,.4)' }, { offset: 1, color: 'rgba(79,124,255,0)' }]) }
+          { offset: 0, color: 'rgba(45,212,191,.35)' }, { offset: 1, color: 'rgba(45,212,191,0)' }]) }
       }]
     });
 
-    if (!trend.length) { charts.trend.clear(); charts.trend.setOption(EMPTY_CHART('暂无销售数据')); }
+    if (trend.length) { setChartEmpty('chartTrend', false); } else { charts.trend.clear(); setChartEmpty('chartTrend', true, '暂无销售数据'); }
 
     // 2 采购 vs 销售 柱状(同轴: 都是金额)
     charts.pvs = echarts.init(document.getElementById('chartPvs'));
     charts.pvs.setOption({
-      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
       legend: { data: ['采购', '销售'], textStyle: { color: '#9aa3bd' }, top: 0 },
       grid: { left: 44, right: 16, top: 34, bottom: 26 },
       xAxis: { type: 'category', data: pvs.map(p => p.day), ...axis },
       yAxis: { type: 'value', ...split },
       series: [
         { name: '采购', type: 'bar', barWidth: 12, data: pvs.map(p => p.purchaseAmount || 0),
-          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#8b5cf6'},{offset:1,color:'rgba(139,92,246,.35)'}]) } },
+          itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#60a5fa'},{offset:1,color:'rgba(96,165,250,.35)'}]) } },
         { name: '销售', type: 'bar', barWidth: 12, data: pvs.map(p => p.saleAmount || 0),
           itemStyle: { borderRadius: [4,4,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#22d3ee'},{offset:1,color:'rgba(34,211,238,.3)'}]) } }
       ]
     });
 
-    if (!pvs.length) { charts.pvs.clear(); charts.pvs.setOption(EMPTY_CHART('暂无数据')); }
+    if (pvs.length) { setChartEmpty('chartPvs', false); } else { charts.pvs.clear(); setChartEmpty('chartPvs', true, '暂无数据'); }
 
     // 3 商品 TOP5 条形
     charts.top = echarts.init(document.getElementById('chartTop'));
     charts.top.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
       grid: { left: 60, right: 30, top: 10, bottom: 24 },
       xAxis: { type: 'value', ...split },
       yAxis: { type: 'category', data: top.map(t => t.name).reverse(), ...axis },
       series: [{ type: 'bar', data: top.map(t => t.amount).reverse(), barWidth: 14,
         itemStyle: { borderRadius: [0,6,6,0], color: new echarts.graphic.LinearGradient(0,0,1,0,[
-          { offset: 0, color: 'rgba(79,124,255,.25)' }, { offset: 1, color: '#4f7cff' }]) } }]
+          { offset: 0, color: 'rgba(45,212,191,.2)' }, { offset: 1, color: '#2dd4bf' }]) } }]
     });
 
-    if (!top.length) { charts.top.clear(); charts.top.setOption(EMPTY_CHART('暂无销售数据')); }
+    if (top.length) { setChartEmpty('chartTop', false); } else { charts.top.clear(); setChartEmpty('chartTop', true, '暂无销售数据'); }
 
     // 4 库存分类环形
     charts.cat = echarts.init(document.getElementById('chartCat'));
-    const catColors = ['#4f7cff','#8b5cf6','#22d3ee','#e879f9','#34d399','#fbbf24'];
+    const catColors = ['#2dd4bf','#60a5fa','#fbbf24','#34d399','#fb7185','#94a3b8'];
     charts.cat.setOption({
-      tooltip: { trigger: 'item', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(139,156,255,.3)', textStyle: { color: '#e8ecf8' } },
+      tooltip: { trigger: 'item', backgroundColor: 'rgba(20,26,40,.9)', borderColor: 'rgba(148,163,184,.3)', textStyle: { color: '#e8ecf8' } },
       legend: { orient: 'vertical', right: 6, top: 'center', textStyle: { color: '#9aa3bd' }, itemWidth: 10, itemHeight: 10 },
       color: catColors,
       series: [{
@@ -860,7 +918,7 @@ async function loadOverview() {
         data: cat.map((c, i) => ({ name: c.name || '未分类', value: c.stock, itemStyle: { color: catColors[i % catColors.length] } }))
       }]
     });
-    if (!cat.length) { charts.cat.clear(); charts.cat.setOption(EMPTY_CHART('暂无库存数据')); }
+    if (cat.length) { setChartEmpty('chartCat', false); } else { charts.cat.clear(); setChartEmpty('chartCat', true, '暂无库存数据'); }
   } catch (e) { toast('总览加载失败: ' + friendlyError(e), 'err'); }
 }
 
