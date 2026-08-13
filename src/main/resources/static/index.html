@@ -1724,11 +1724,15 @@ async function loadOverview() {
 
     // 3 商品 TOP5 条形
     charts.top = echarts.init(document.getElementById('chartTop'));
+    // 左侧留白按最长商品名动态计算(中文约13px/字): 长名字完整显示, 不再截断
+    const topNames = top.map(t => t.name).reverse();
+    const topMaxLen = topNames.reduce((m, n) => Math.max(m, String(n || '').length), 0);
+    const topGridLeft = Math.min(150, 50 + topMaxLen * 13);
     charts.top.setOption({
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), textStyle: { color: cssVar('--text') } },
-      grid: { left: 60, right: 30, top: 10, bottom: 24 },
+      grid: { left: topGridLeft, right: 30, top: 10, bottom: 24 },
       xAxis: { type: 'value', ...split },
-      yAxis: { type: 'category', data: top.map(t => t.name).reverse(), ...axis },
+      yAxis: { type: 'category', data: topNames, ...axis },
       series: [{ type: 'bar', data: top.map(t => t.amount).reverse(), barWidth: 14,
         itemStyle: { borderRadius: [0,6,6,0], color: new echarts.graphic.LinearGradient(0,0,1,0,[
           { offset: 0, color: hexA(cssVar('--accent'), .2) }, { offset: 1, color: cssVar('--accent') }]) } }]
