@@ -542,8 +542,9 @@
     font-size: 12px; letter-spacing: .06em; transition: color .15s;
   }
   .chat-think summary::-webkit-details-marker { display: none; }
-  .chat-think summary::before { content: '▸'; font-size: 15px; line-height: 1; transition: transform .18s ease; }
-  .chat-think[open] summary::before { transform: rotate(90deg); }
+  /* 展开箭头放右侧(标题/图标靠左, 箭头右对齐) */
+  .chat-think summary::after { content: '▸'; margin-left: auto; font-size: 15px; line-height: 1; transition: transform .18s ease; }
+  .chat-think[open] summary::after { transform: rotate(90deg); }
   .chat-think summary:hover { color: var(--text); }
   .chat-think summary svg { flex-shrink: 0; }
   .chat-think-body {
