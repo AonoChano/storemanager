@@ -334,6 +334,46 @@
   .badge.out { background: rgba(251,191,36,.14); color: var(--warn); }
   .warn { color: var(--err); font-weight: 700; }
 
+  /* ===== 表格脚注(图例) 与 分页器 ===== */
+  .table-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  .legend { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--faint); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); display: inline-block; }
+  .pager { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pager-info { font-size: 12px; color: var(--faint); }
+  .pager-nav { display: flex; align-items: center; gap: 3px; }
+  .pager-btn {
+    min-width: 26px; height: 26px; padding: 0 6px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--dim);
+    font-size: 12px; cursor: pointer; transition: all .12s;
+  }
+  .pager-btn:hover:not(:disabled):not(.active) { border-color: var(--accent); color: var(--text); }
+  .pager-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .pager-btn:disabled { opacity: .4; cursor: default; }
+  .pager-ell { color: var(--faint); font-size: 12px; padding: 0 2px; }
+  .pager-size {
+    height: 26px; padding: 0 6px; border-radius: 6px; font-size: 12px;
+    border: 1px solid var(--border); background: var(--input-bg); color: var(--text); outline: none;
+  }
+
+  /* ===== 表格行操作列 ===== */
+  .row-muted td { opacity: .55; }
+  .row-ops { white-space: nowrap; }
+  .row-op {
+    background: none; border: none; color: var(--faint); cursor: pointer;
+    padding: 3px 5px; border-radius: 6px; line-height: 1; vertical-align: middle;
+    transition: color .12s, background .12s;
+  }
+  .row-op:hover { color: var(--accent); background: var(--row-hover); }
+  .row-op.del:hover { color: var(--err); }
+  .row-op.del.confirming { color: var(--err); background: rgba(184, 58, 58, .15); }
+  .picker-row .picker-del {
+    flex-shrink: 0; background: none; border: none; padding: 4px;
+    color: var(--faint); cursor: pointer; border-radius: 6px; display: grid; place-items: center; opacity: 0; transition: all .15s;
+  }
+  .picker-row:hover .picker-del { opacity: 1; }
+  .picker-del:hover { color: var(--err); background: var(--row-hover); opacity: 1; }
+  .picker-del.confirming { color: var(--err); background: rgba(184, 58, 58, .15); opacity: 1; }
+
   .tag { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11.5px; color: var(--dim); background: rgba(255,255,255,.05); }
   #profitInfo { margin: 2px 0 14px; font-size: 14px; color: var(--dim); display: flex; gap: 20px; flex-wrap: wrap; }
   #profitInfo b { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -441,6 +481,8 @@
     background: none; border: none; border-radius: 0; padding: 0 2px;
     font-size: 14px; line-height: 1.7; white-space: normal; word-break: break-word;
   }
+  /* 流式尾块容器: 不产生布局盒子, 内部块直接参与正文排版 —— 与已固化的块无缝衔接 */
+  .md-tail { display: contents; }
   .chat-msg.bot p { margin: 0 0 6px; }
   .chat-msg.bot p:last-child { margin-bottom: 0; }
   .chat-msg.bot p:has(.chat-tool-chip) { margin: 2px 0; }   /* 工具调用行彼此紧凑 */
@@ -768,38 +810,19 @@
             <input id="searchName" placeholder="按名称搜索">
             <button class="btn" onclick="loadProducts()">搜索</button>
             <button class="btn ghost" onclick="loadProductOptions()">刷新商品下拉</button>
-            <span class="tag">库存低于预警线标红</span>
+            <button class="btn" onclick="openProductForm()">+ 新增商品</button>
             <span id="productMsg"></span>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>名称</th><th>条码</th><th>分类</th><th>规格</th><th>单位</th><th>进价</th><th>售价</th><th>库存</th><th>预警线</th><th>状态</th></tr></thead>
+            <thead><tr><th>ID</th><th>名称</th><th>条码</th><th>分类</th><th>规格</th><th>单位</th><th>进价</th><th>售价</th><th>库存</th><th>预警线</th><th>状态</th><th>操作</th></tr></thead>
             <tbody id="productBody"></tbody>
           </table>
         </div>
-        <div class="card-head" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);"><h2>新增商品</h2></div>
-        <div class="form">
-          <div class="form-row cols-3">
-            <div class="field"><label>名称 *</label><input id="pName" placeholder="商品名称"></div>
-            <div class="field"><label>条码</label><input id="pBarcode" placeholder="扫码 / 手动输入"><span class="field-tip" id="barcodeTip"></span></div>
-            <div class="field"><label>分类</label><select id="pCategory"></select></div>
-          </div>
-          <div class="form-row cols-3">
-            <div class="field"><label>规格</label><input id="pSpec" placeholder="如 500ml"></div>
-            <div class="field"><label>单位</label><input id="pUnit" placeholder="如 瓶 / 箱"></div>
-            <div class="field"><label>预警阈值</label><input id="pWarn" placeholder="低于此值预警" type="number"></div>
-          </div>
-          <div class="form-row cols-3">
-            <div class="field"><label>进价</label><input id="pPurchase" type="number" step="0.01" placeholder="0.00"></div>
-            <div class="field"><label>售价</label><input id="pSale" type="number" step="0.01" placeholder="0.00"></div>
-            <div class="field field-btn"><label></label><button class="btn" onclick="addProduct()">新增商品</button></div>
-          </div>
-          <details class="batch-import">
-            <summary>批量导入商品（粘贴 Excel / 表格行）</summary>
-            <textarea id="batchText" placeholder="每行一个商品，Tab 或逗号分隔：&#10;可乐&#9;690001&#9;2.5&#9;3.5&#10;雪碧&#9;690002&#9;2.5&#9;3.5&#10;&#10;列顺序: 名称, 条码, 进价, 售价"></textarea>
-            <div class="entry-actions"><button class="btn" onclick="batchAdd()">批量新增</button><span class="field-tip" id="batchTip"></span></div>
-          </details>
+        <div class="table-foot">
+          <span class="legend"><i class="legend-dot"></i>红字 = 库存低于预警线</span>
+          <div class="pager" id="productPager"></div>
         </div>
       </div>
     </div>
@@ -884,6 +907,7 @@
             <tbody id="recordBody"></tbody>
           </table>
         </div>
+        <div class="table-foot"><div class="pager" id="stockPager"></div></div>
       </div>
     </div>
 
@@ -922,6 +946,7 @@
             <tbody id="logBody"></tbody>
           </table>
         </div>
+        <div class="table-foot"><div class="pager" id="logPager"></div></div>
       </div>
     </div>
 
@@ -956,6 +981,38 @@
       <span id="supplierCount" style="flex:1;"></span>
       <input id="supplierNewName" placeholder="新供应商名称" style="flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);font-size:13px;outline:none;">
       <button class="btn ghost" onclick="addSupplierInPicker()">新建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 商品表单弹窗(新增/编辑二态, 含批量导入) -->
+<div class="modal" id="productForm" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="productFormTitle" style="font-size:14px;white-space:nowrap;">新增商品</h3>
+      <button class="chat-close" onclick="closeProductForm()" aria-label="关闭"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="form" style="padding:14px 16px;overflow-y:auto;">
+      <div class="form-row cols-3">
+        <div class="field"><label>名称 *</label><input id="pName" placeholder="商品名称"></div>
+        <div class="field"><label>条码</label><input id="pBarcode" placeholder="扫码 / 手动输入"><span class="field-tip" id="barcodeTip"></span></div>
+        <div class="field"><label>分类</label><select id="pCategory"></select></div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>规格</label><input id="pSpec" placeholder="如 500ml"></div>
+        <div class="field"><label>单位</label><input id="pUnit" placeholder="如 瓶 / 箱"></div>
+        <div class="field"><label>预警阈值</label><input id="pWarn" placeholder="低于此值预警" type="number"></div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>进价</label><input id="pPurchase" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="field"><label>售价</label><input id="pSale" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="field field-btn"><label></label><button class="btn" id="productSaveBtn" onclick="saveProduct()">保存</button></div>
+      </div>
+      <details class="batch-import" id="batchImportBox" style="margin-top:10px;">
+        <summary>批量导入商品（粘贴 Excel / 表格行）</summary>
+        <textarea id="batchText" placeholder="每行一个商品，Tab 或逗号分隔：&#10;可乐&#9;690001&#9;2.5&#9;3.5&#10;雪碧&#9;690002&#9;2.5&#9;3.5&#10;&#10;列顺序: 名称, 条码, 进价, 售价"></textarea>
+        <div class="entry-actions"><button class="btn" onclick="batchAdd()">批量新增</button><span class="field-tip" id="batchTip"></span></div>
+      </details>
     </div>
   </div>
 </div>
@@ -1025,6 +1082,12 @@ async function post(url, body) {
 }
 async function put(url, body) {
   const r = await fetch(url, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+  const j = await r.json();
+  if (j.code !== 1) { if (j.msg === '未登录') handleSessionExpired(); throw new Error(j.msg); }
+  return j.data;
+}
+async function del(url) {
+  const r = await fetch(url, { method: 'DELETE', headers: authHeaders() });
   const j = await r.json();
   if (j.code !== 1) { if (j.msg === '未登录') handleSessionExpired(); throw new Error(j.msg); }
   return j.data;
@@ -1177,6 +1240,7 @@ function renderSupplierList(filter) {
       <span class="p-name">${kw ? esc(s.name.replace(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<b>$1</b>')) : esc(s.name)}</span>
       <span class="p-meta">ID ${s.id}</span>
       <button class="picker-edit" title="编辑" onclick="event.stopPropagation();startEditSupplier(${s.id}, this)"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></button>
+      <button class="picker-del" title="删除" onclick="event.stopPropagation();delSupplier(${s.id}, this)"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
     </div>`).join('');
   document.getElementById('supplierCount').textContent = items.length + ' 个供应商';
 }
@@ -1208,6 +1272,27 @@ function startEditSupplier(id, btn) {
 
 function cancelEditSupplier() {
   renderSupplierList(document.getElementById('supplierSearch').value);
+}
+
+// 供应商删除(两步确认: 首次点击变红, 3秒内再点执行)
+function delSupplier(id, btn) {
+  if (btn.dataset.confirm === '1') { doDeleteSupplier(id); return; }
+  btn.dataset.confirm = '1';
+  btn.classList.add('confirming');
+  setTimeout(() => { if (btn.dataset.confirm) { delete btn.dataset.confirm; btn.classList.remove('confirming'); } }, 3000);
+}
+
+async function doDeleteSupplier(id) {
+  try {
+    await del('/supplier/' + id);
+    toast('已删除', 'ok');
+    // 采购单若正选中该供应商则清空
+    const cur = document.getElementById('poSupplierInput').value;
+    const target = (suppliers.find(s => s.id === id) || {}).name;
+    if (cur && target && cur === target) document.getElementById('poSupplierInput').value = '';
+    await loadSuppliers();
+    renderSupplierList(document.getElementById('supplierSearch').value);
+  } catch (e) { toast(friendlyError(e), 'err'); }
 }
 
 async function saveEditSupplier(id, inputEl) {
@@ -1261,23 +1346,74 @@ document.getElementById('supplierNewName').addEventListener('keydown', e => {
 });
 
 // ========== 商品 ==========
+// 分页器(通用): 页码窗口 + 每页条数选择器; onGo(page, pageSize)
+const PAGER_SIZES = [10, 20, 50, 80, 100];
+let productPage = 1, productPageSize = 10;
+let stockPage = 1, stockPageSize = 10;
+let logPage = 1, logPageSize = 10;
+
+function renderPager(el, total, page, pageSize, onGo) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (page > pages) page = pages;
+  const btn = (label, target, disabled, active) =>
+    '<button class="pager-btn' + (active ? ' active' : '') + '"' + (disabled ? ' disabled' : '') +
+    (target != null ? ' data-page="' + target + '"' : '') + '>' + label + '</button>';
+  let html = '<span class="pager-info">共 ' + total + ' 条 · ' + pages + ' 页</span><div class="pager-nav">';
+  html += btn('‹', page - 1, page <= 1);
+  const start = Math.max(1, page - 2), end = Math.min(pages, page + 2);
+  if (start > 1) { html += btn('1', 1); if (start > 2) html += '<span class="pager-ell">…</span>'; }
+  for (let i = start; i <= end; i++) html += btn(i, i, false, i === page);
+  if (end < pages) { if (end < pages - 1) html += '<span class="pager-ell">…</span>'; html += btn(pages, pages); }
+  html += btn('›', page + 1, page >= pages);
+  html += '</div><select class="pager-size">' +
+    PAGER_SIZES.map(s => '<option value="' + s + '"' + (s === pageSize ? ' selected' : '') + '>' + s + ' 条/页</option>').join('') +
+    '</select>';
+  el.innerHTML = html;
+  el.querySelectorAll('.pager-btn[data-page]').forEach(b => b.addEventListener('click', () => onGo(Number(b.dataset.page), pageSize)));
+  el.querySelector('.pager-size').addEventListener('change', e => onGo(1, Number(e.target.value)));
+}
+
+// 商品操作列图标
+const ICON_EDIT = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+const ICON_OFF = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+const ICON_ON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 7l5-5 5 5"/><path d="M12 2v12"/></svg>';
+const escHtmlTd = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// 商品表格渲染(分页切片 + 操作列)
+function renderProductTable() {
+  const total = products.length;
+  const pages = Math.max(1, Math.ceil(total / productPageSize));
+  if (productPage > pages) productPage = pages;
+  const slice = products.slice((productPage - 1) * productPageSize, productPage * productPageSize);
+  document.getElementById('productBody').innerHTML = slice.map(p => {
+    const low = p.stock < p.warningThreshold;
+    return '<tr class="' + (p.status !== 1 ? 'row-muted' : '') + '">' +
+      '<td>' + p.id + '</td><td><b>' + escHtmlTd(p.name) + '</b></td><td>' + escHtmlTd(p.barcode) + '</td>' +
+      '<td>' + escHtmlTd(catMap[p.categoryId] || p.categoryId || '-') + '</td>' +
+      '<td>' + escHtmlTd(p.spec) + '</td><td>' + escHtmlTd(p.unit) + '</td>' +
+      '<td>' + p.purchasePrice + '</td><td>' + p.salePrice + '</td>' +
+      '<td class="' + (low ? 'warn' : '') + '">' + p.stock + '</td>' +
+      '<td>' + p.warningThreshold + '</td>' +
+      '<td>' + (p.status === 1 ? '<span class="badge ok">在售</span>' : '<span class="badge muted">下架</span>') + '</td>' +
+      '<td class="row-ops">' +
+        '<button class="row-op" title="编辑" onclick="openProductForm(' + p.id + ')">' + ICON_EDIT + '</button>' +
+        '<button class="row-op" title="' + (p.status === 1 ? '下架' : '上架') + '" onclick="toggleProductStatus(' + p.id + ')">' + (p.status === 1 ? ICON_OFF : ICON_ON) + '</button>' +
+        '<button class="row-op del" title="删除" onclick="delProduct(' + p.id + ', this)">' + ICON_TRASH + '</button>' +
+      '</td></tr>';
+  }).join('') || '<tr><td colspan="12" class="empty">暂无商品</td></tr>';
+  renderPager(document.getElementById('productPager'), total, productPage, productPageSize, (pg, ps) => {
+    productPage = pg; productPageSize = ps; renderProductTable();
+  });
+}
+
 async function loadProducts() {
   try {
     const name = v('searchName');
     const data = await get('/product/list?name=' + encodeURIComponent(name));
     products = data;
-    document.getElementById('productBody').innerHTML = data.map(p => {
-      const low = p.stock < p.warningThreshold;
-      return `<tr>
-        <td>${p.id}</td><td><b>${p.name}</b></td><td>${p.barcode || ''}</td>
-        <td>${catMap[p.categoryId] || p.categoryId || '-'}</td>
-        <td>${p.spec || ''}</td><td>${p.unit || ''}</td>
-        <td>${p.purchasePrice}</td><td>${p.salePrice}</td>
-        <td class="${low ? 'warn' : ''}">${p.stock}</td>
-        <td>${p.warningThreshold}</td>
-        <td>${p.status === 1 ? '<span class="badge ok">在售</span>' : '<span class="badge muted">下架</span>'}</td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="11" class="empty">暂无商品</td></tr>';
+    productPage = 1;
+    renderProductTable();
   } catch (e) { msg('productMsg', '加载失败: ' + friendlyError(e), true); }
 }
 async function loadProductOptions() {
@@ -1285,35 +1421,100 @@ async function loadProductOptions() {
   if (products.length && !document.querySelector('#poDetailBody .entry-row')) addEntryRow('po');
   if (products.length && !document.querySelector('#soDetailBody .entry-row')) addEntryRow('so');
 }
-async function addProduct() {
+
+// ========== 商品表单弹窗(新增/编辑二态) ==========
+let editingProductId = null;
+
+function openProductForm(id) {
+  editingProductId = id || null;
+  const p = id ? products.find(x => x.id === id) : null;
+  document.getElementById('productFormTitle').textContent = id ? '编辑商品' : '新增商品';
+  document.getElementById('productSaveBtn').textContent = id ? '保存修改' : '保存';
+  document.getElementById('batchImportBox').hidden = !!id;  // 编辑态隐藏批量导入
+  document.getElementById('pName').value = p ? p.name : '';
+  document.getElementById('pBarcode').value = p ? (p.barcode || '') : '';
+  document.getElementById('pCategory').value = p && p.categoryId ? p.categoryId : '';
+  document.getElementById('pSpec').value = p ? (p.spec || '') : '';
+  document.getElementById('pUnit').value = p ? (p.unit || '') : '';
+  document.getElementById('pWarn').value = p ? (p.warningThreshold ?? '') : '';
+  document.getElementById('pPurchase').value = p ? (p.purchasePrice ?? '') : '';
+  document.getElementById('pSale').value = p ? (p.salePrice ?? '') : '';
+  document.getElementById('batchText').value = '';
+  document.getElementById('batchTip').textContent = '';
+  document.getElementById('barcodeTip').textContent = '';
+  document.getElementById('productForm').hidden = false;
+  document.getElementById('pName').focus();
+}
+
+function closeProductForm() {
+  document.getElementById('productForm').hidden = true;
+  editingProductId = null;
+}
+
+async function saveProduct() {
   const body = { name: v('pName'), barcode: v('pBarcode'), categoryId: num('pCategory'),
     spec: v('pSpec'), unit: v('pUnit'), purchasePrice: num('pPurchase'), salePrice: num('pSale'),
     warningThreshold: num('pWarn') };
   if (!body.name) return toast('请填写商品名称', 'err');
-  // 条码重复校验(提交前)
-  if (body.barcode && products.some(p => p.barcode && p.barcode === body.barcode)) {
+  // 条码重复校验(排除当前编辑的商品)
+  if (body.barcode && products.some(p => p.barcode && p.barcode === body.barcode && p.id !== editingProductId)) {
     return toast('条码已存在: ' + body.barcode, 'err');
   }
   try {
-    await post('/product/add', body);
-    msg('productMsg', '新增成功');
-    document.getElementById('pName').value = '';
-    document.getElementById('pBarcode').value = '';
-    document.getElementById('pSpec').value = '';
-    document.getElementById('pPurchase').value = '';
-    document.getElementById('pSale').value = '';
+    if (editingProductId) {
+      await put('/product/update', Object.assign({ id: editingProductId }, body));
+      msg('productMsg', '修改成功');
+    } else {
+      await post('/product/add', body);
+      msg('productMsg', '新增成功');
+    }
+    closeProductForm();
     loadProducts(); loadProductOptions();
-  } catch (e) { msg('productMsg', '新增失败: ' + friendlyError(e), true); }
+  } catch (e) { msg('productMsg', '保存失败: ' + friendlyError(e), true); }
 }
 
-// 条码输入即时查重
+// 下架⇄上架切换(复用更新接口)
+async function toggleProductStatus(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  try {
+    await put('/product/update', Object.assign({}, p, { status: p.status === 1 ? 0 : 1 }));
+    msg('productMsg', p.status === 1 ? '已下架' : '已上架');
+    loadProducts(); loadProductOptions();
+  } catch (e) { msg('productMsg', '操作失败: ' + friendlyError(e), true); }
+}
+
+// 删除(两步确认: 首次点击变红, 3秒内再点执行)
+function delProduct(id, btn) {
+  if (btn.dataset.confirm === '1') { doDeleteProduct(id); return; }
+  btn.dataset.confirm = '1';
+  btn.classList.add('confirming');
+  setTimeout(() => { if (btn.dataset.confirm) { delete btn.dataset.confirm; btn.classList.remove('confirming'); } }, 3000);
+}
+
+async function doDeleteProduct(id) {
+  try {
+    await del('/product/' + id);
+    toast('已删除', 'ok');
+    loadProducts(); loadProductOptions();
+  } catch (e) { toast(friendlyError(e), 'err'); }
+}
+
+// 条码输入即时查重(排除当前编辑商品)
 document.getElementById('pBarcode').addEventListener('input', () => {
   const tip = document.getElementById('barcodeTip');
   const bc = v('pBarcode');
   if (!bc) { tip.textContent = ''; return; }
-  const dup = products.find(p => p.barcode && p.barcode === bc);
+  const dup = products.find(p => p.barcode && p.barcode === bc && p.id !== editingProductId);
   if (dup) { tip.textContent = '条码已存在: ' + dup.name; tip.className = 'field-tip err'; }
   else { tip.textContent = '条码可用'; tip.className = 'field-tip ok'; }
+});
+// 商品表单弹窗: 点遮罩关闭 / Esc 关闭
+document.getElementById('productForm').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeProductForm();
+});
+document.getElementById('pName').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeProductForm();
 });
 
 // 供应商/客户记忆: 记住上次选择
@@ -1433,14 +1634,9 @@ document.getElementById('productPicker').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeProductPicker();  // 点遮罩关闭
 });
 
-// 商品页搜索: 输入即过滤(本地 products, 无需点按钮)
-document.getElementById('searchName').addEventListener('input', e => {
-  const kw = e.target.value.trim().toLowerCase();
-  const rows = document.querySelectorAll('#productBody tr');
-  rows.forEach(tr => {
-    const text = Array.from(tr.cells).map(c => c.textContent).join(' ').toLowerCase();
-    tr.style.display = (!kw || text.includes(kw)) ? '' : 'none';
-  });
+// 商品页搜索: 回车触发服务端搜索(本地逐行过滤已由分页渲染替代)
+document.getElementById('searchName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadProducts();
 });
 
 // ========== 采购/销售单据(多商品明细 + 扫码流水线) ==========
@@ -1593,16 +1789,28 @@ document.addEventListener('keydown', e => {
 });
 
 // ========== 流水 ==========
+let stockRecords = [];
 async function loadRecords() {
   try {
-    const data = await get('/stockRecord/list');
-    document.getElementById('recordBody').innerHTML = data.map(r => `<tr>
-      <td>${fmtDate(r.createTime)}</td>
-      <td><b>${r.productName || r.productId}</b></td>
-      <td>${r.type === 1 ? '<span class="badge in">入库</span>' : '<span class="badge out">出库</span>'}</td>
-      <td>${r.quantity}</td><td>${r.afterStock}</td><td>${r.bizType}</td>
-    </tr>`).join('') || '<tr><td colspan="6" class="empty">暂无流水</td></tr>';
+    stockRecords = await get('/stockRecord/list');
+    stockPage = 1;
+    renderRecordTable();
   } catch (e) {}
+}
+function renderRecordTable() {
+  const total = stockRecords.length;
+  const pages = Math.max(1, Math.ceil(total / stockPageSize));
+  if (stockPage > pages) stockPage = pages;
+  const slice = stockRecords.slice((stockPage - 1) * stockPageSize, stockPage * stockPageSize);
+  document.getElementById('recordBody').innerHTML = slice.map(r => `<tr>
+    <td>${fmtDate(r.createTime)}</td>
+    <td><b>${escHtmlTd(r.productName || r.productId)}</b></td>
+    <td>${r.type === 1 ? '<span class="badge in">入库</span>' : '<span class="badge out">出库</span>'}</td>
+    <td>${r.quantity}</td><td>${r.afterStock}</td><td>${r.bizType}</td>
+  </tr>`).join('') || '<tr><td colspan="6" class="empty">暂无流水</td></tr>';
+  renderPager(document.getElementById('stockPager'), total, stockPage, stockPageSize, (pg, ps) => {
+    stockPage = pg; stockPageSize = ps; renderRecordTable();
+  });
 }
 
 // ========== 报表 ==========
@@ -1619,14 +1827,26 @@ async function loadReports() {
 }
 
 // ========== 日志 ==========
+let logs = [];
 async function loadLogs() {
   try {
-    const data = await get('/operationLog/list');
-    document.getElementById('logBody').innerHTML = data.map(o => `<tr>
-      <td>${fmtDate(o.createTime)}</td><td>${o.username || '-'}</td>
-      <td>${o.module || ''}</td><td>${o.action || ''}</td><td>${o.ip || '-'}</td>
-    </tr>`).join('') || '<tr><td colspan="5" class="empty">暂无日志</td></tr>';
+    logs = await get('/operationLog/list');
+    logPage = 1;
+    renderLogTable();
   } catch (e) {}
+}
+function renderLogTable() {
+  const total = logs.length;
+  const pages = Math.max(1, Math.ceil(total / logPageSize));
+  if (logPage > pages) logPage = pages;
+  const slice = logs.slice((logPage - 1) * logPageSize, logPage * logPageSize);
+  document.getElementById('logBody').innerHTML = slice.map(o => `<tr>
+    <td>${fmtDate(o.createTime)}</td><td>${o.username || '-'}</td>
+    <td>${o.module || ''}</td><td>${o.action || ''}</td><td>${o.ip || '-'}</td>
+  </tr>`).join('') || '<tr><td colspan="5" class="empty">暂无日志</td></tr>';
+  renderPager(document.getElementById('logPager'), total, logPage, logPageSize, (pg, ps) => {
+    logPage = pg; logPageSize = ps; renderLogTable();
+  });
 }
 
 // ========== KPI + 图表 ==========
@@ -1851,36 +2071,45 @@ const STOP_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" s
 const THINK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.2 2.2h4.8c.1-.8.5-1.6 1.2-2.2A6 6 0 0 0 12 3z"/><path d="M12 6v2"/><path d="M9.7 8.5l-1-1M14.3 8.5l1-1"/></svg>';
 const TOOL_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v7c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 12v7c0 1.7 3.1 3 7 3s7-1.3 7-3v-7"/></svg>';
 
-// 轻量 Markdown 渲染(先安全转义再处理常用语法)
-function renderMarkdown(text) {
-  if (!text) return '';
-  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  // 行内语法 + 工具标记芯片(标记不含转义字符, 在转义后处理)
-  const inline = s => s
-    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+// 行内语法 + 工具标记芯片(输入须已 HTML 转义)
+// 行内代码先抽出占位, 否则后续 * / ** / 链接正则会扫进代码内容(`a*b*c` 被误斜体)
+// 占位符 <序号>: 输入已转义, 裸 < 不可能出现在正文里, 且纯数字不构成合法标签名
+function renderInline(s) {
+  const codes = [];
+  return s
+    .replace(/`([^`\n]+)`/g, function (m, c) { return '<' + (codes.push(c) - 1) + '>'; })
     .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    // 星号须紧贴非空白(简化版 left-flanking), 否则 "3 * 4 * 5" / "select * from t" 会被误判成斜体
+    .replace(/\*(\S(?:[^*\n]*\S)?)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(TOOL_MARK_RE, function (m, n) { return toolChipHtml(n); });
+    .replace(TOOL_MARK_RE, function (m, n) { return toolChipHtml(n); })
+    .replace(/<(\d+)>/g, function (m, i) { return '<code>' + codes[i] + '</code>'; });
+}
 
-  // 行级状态机: 按块(段落/列表/表格/代码)组装结构化 HTML, 避免全局正则互相干扰
-  const lines = String(text).split(/\r?\n/);
+// 块级解析: 行级状态机, 按块(段落/列表/表格/代码)产出 [{type, html}]
+// 整段渲染与流式增量渲染共用 —— 后者靠"块一旦封口就永不再变"的性质做 DOM 冻结
+function parseBlocks(text) {
+  if (!text) return [];
   const out = [];
+  const push = (type, html) => out.push({ type: type, html: html });
+  const lines = String(text).split(/\r?\n/);
   let inCode = false, codeBuf = [];
   let list = null, para = [], table = [];
 
-  const flushList = () => { if (list) { out.push('<' + list.tag + '>' + list.items.join('') + '</' + list.tag + '>'); list = null; } };
-  const flushPara = () => { if (para.length) { out.push('<p>' + para.map(l => inline(esc(l))).join('<br>') + '</p>'); para = []; } };
+  const flushList = () => { if (list) { push('list', '<' + list.tag + '>' + list.items.join('') + '</' + list.tag + '>'); list = null; } };
+  const flushPara = () => { if (para.length) { push('para', '<p>' + para.map(l => renderInline(escHtml(l))).join('<br>') + '</p>'); para = []; } };
+  const flushCode = () => { push('code', '<pre><code>' + escHtml(codeBuf.join('\n')) + '</code></pre>'); codeBuf = []; };
   const flushTable = () => {
     if (!table.length) return;
     const rows = table.filter(r => !r.trim().replace(/^\||\|$/g, '').split('|').every(c => /^\s*:?-{2,}:?\s*$/.test(c.trim())));
-    if (rows.length >= 2) {
+    // 一行有效行即成表: 流式中表格从表头开始逐行长出, 而非"段落→段落→表格"两次突变
+    if (rows.length) {
       let t = '<table>';
       rows.forEach((r, i) => {
         const cells = r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
-        t += '<tr>' + cells.map(c => (i === 0 ? '<th>' : '<td>') + inline(esc(c)) + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>';
+        t += '<tr>' + cells.map(c => (i === 0 ? '<th>' : '<td>') + renderInline(escHtml(c)) + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>';
       });
-      out.push(t + '</table>');
+      push('table', t + '</table>');
     } else {
       table.forEach(l => para.push(l));
       flushPara();
@@ -1892,7 +2121,7 @@ function renderMarkdown(text) {
     const line = raw.trimEnd();
     // 代码块开关
     if (/^```/.test(line.trim())) {
-      if (inCode) { out.push('<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>'); codeBuf = []; }
+      if (inCode) flushCode();
       else { flushList(); flushPara(); flushTable(); }
       inCode = !inCode;
       continue;
@@ -1906,23 +2135,23 @@ function renderMarkdown(text) {
 
     let m;
     // 标题(兼容无空格: ##查询说明)
-    if ((m = t.match(/^###\s*(.*)$/))) { flushList(); flushPara(); flushTable(); out.push('<h4>' + inline(esc(m[1])) + '</h4>'); continue; }
-    if ((m = t.match(/^##\s*(.*)$/))) { flushList(); flushPara(); flushTable(); out.push('<h3>' + inline(esc(m[1])) + '</h3>'); continue; }
-    if ((m = t.match(/^#\s*(.*)$/))) { flushList(); flushPara(); flushTable(); out.push('<h2>' + inline(esc(m[1])) + '</h2>'); continue; }
-    if (/^\s*-{3,}\s*$/.test(t)) { flushList(); flushPara(); flushTable(); out.push('<hr>'); continue; }   // 水平分割线
+    if ((m = t.match(/^###\s*(.*)$/))) { flushList(); flushPara(); flushTable(); push('heading', '<h4>' + renderInline(escHtml(m[1])) + '</h4>'); continue; }
+    if ((m = t.match(/^##\s*(.*)$/))) { flushList(); flushPara(); flushTable(); push('heading', '<h3>' + renderInline(escHtml(m[1])) + '</h3>'); continue; }
+    if ((m = t.match(/^#\s*(.*)$/))) { flushList(); flushPara(); flushTable(); push('heading', '<h2>' + renderInline(escHtml(m[1])) + '</h2>'); continue; }
+    if (/^\s*-{3,}\s*$/.test(t)) { flushList(); flushPara(); flushTable(); push('hr', '<hr>'); continue; }   // 水平分割线
 
     // 无序列表(兼容无空格: -在库商品 / -**加粗项**; 仅排除 ** 与 -- 开头的行)
     if ((m = t.match(/^-(?!-)\s*(.*)$/)) || (m = t.match(/^\*(?!\*)\s*(.*)$/))) {
       flushPara(); flushTable();
       if (!list || list.tag !== 'ul') { flushList(); list = { tag: 'ul', items: [] }; }
-      list.items.push('<li>' + inline(esc(m[1])) + '</li>');
+      list.items.push('<li>' + renderInline(escHtml(m[1])) + '</li>');
       continue;
     }
     // 有序列表(1-2位序号, 兼容无空格: 1.**飞机杯**; 避免把金额行"3,998.00"误判成列表)
     if ((m = t.match(/^[0-9]{1,2}[.、]\s*(.*)$/))) {
       flushPara(); flushTable();
       if (!list || list.tag !== 'ol') { flushList(); list = { tag: 'ol', items: [] }; }
-      list.items.push('<li>' + inline(esc(m[1])) + '</li>');
+      list.items.push('<li>' + renderInline(escHtml(m[1])) + '</li>');
       continue;
     }
 
@@ -1930,8 +2159,13 @@ function renderMarkdown(text) {
     para.push(line);
   }
   flushList(); flushPara(); flushTable();
-  if (inCode && codeBuf.length) out.push('<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>');
-  return out.join('');
+  if (inCode) flushCode();   // 围栏未闭合: 兜底成块 —— 流式中代码框在 ``` 出现的瞬间即成型
+  return out;
+}
+
+// 整段渲染(非流式路径: 错误消息等)
+function renderMarkdown(text) {
+  return parseBlocks(text).map(b => b.html).join('');
 }
 
 function toggleChat() {
@@ -2035,7 +2269,9 @@ function finalizeBotMsg(el, fullText, opts) {
   el.className = 'chat-msg bot';
   const contentEl = el.querySelector('.chat-content');
   if (contentEl) {
-    contentEl.innerHTML = renderMarkdown(fullText);
+    // 流式路径: 排空缓冲、合并 tail 容器, 复用已渲染的 DOM —— 收尾零跳变, 不再整段重建
+    if (opts.renderer) opts.renderer.finish();
+    else contentEl.innerHTML = renderMarkdown(fullText);
   } else {
     // 非流式路径(错误消息等): 整块渲染
     el.innerHTML = '';
@@ -2137,7 +2373,19 @@ async function sendChat() {
   let thinkPartial = '';   // 滚筒里未换行的进行中行(增量跨 chunk 拼接用)
   let thinkFinalized = false;  // 滚筒已定格为折叠块(工具调用/正文出现后, 后续思考只更新折叠内容)
   let contentEl = null;    // 正文打字机容器(首次正文/工具标记出现时创建)
+  let renderer = null;     // 正文增量渲染器(块级冻结 + 乐观闭合 + 平滑缓冲)
   const body = document.getElementById('chatBody');
+  // 首次正文/工具标记到达: 定格思考显示, 建正文容器与增量渲染器
+  const ensureContent = () => {
+    if (contentEl) return;
+    finalizeThinkEl(thinkingEl, thinkFull);
+    thinkLive = null;
+    thinkFinalized = true;
+    contentEl = document.createElement('div');
+    contentEl.className = 'chat-content';
+    thinkingEl.appendChild(contentEl);
+    renderer = createStreamRenderer(contentEl, body);
+  };
   chatAbort = new AbortController();
   setSendState(true);
   try {
@@ -2192,15 +2440,16 @@ async function sendChat() {
           thinkPartial += data.slice(7);
           const parts = thinkPartial.split('\n');
           thinkPartial = parts.pop();  // 最后一段可能未换行, 保留为进行中的行
-          parts.forEach(line => {
-            const row = document.createElement('div');
-            row.className = 'think-row';
-            row.textContent = line;
-            thinkLive.appendChild(row);
+          scrollFollow(body, function () {
+            parts.forEach(line => {
+              const row = document.createElement('div');
+              row.className = 'think-row';
+              row.textContent = line;
+              thinkLive.appendChild(row);
+            });
+            // 滚筒滚到底: 新行从遮罩窗口底部滚入, 旧行向上滚出(平滑动画)
+            thinkLive.scrollTop = thinkLive.scrollHeight;
           });
-          // 滚筒滚到底: 新行从遮罩窗口底部滚入, 旧行向上滚出(平滑动画)
-          thinkLive.scrollTop = thinkLive.scrollHeight;
-          body.scrollTop = body.scrollHeight;
           continue;
         }
         if (data.startsWith('[TOOL]')) {
@@ -2211,35 +2460,20 @@ async function sendChat() {
           const tname = sep >= 0 ? payload.slice(0, sep) : payload;
           const tdetail = sep >= 0 ? payload.slice(sep + 2) : '';
           // 正文容器尚未建立(工具先于正文): 定格思考并立即建容器, 芯片即刻出现
-          if (!contentEl) {
-            finalizeThinkEl(thinkingEl, thinkFull);
-            thinkLive = null;
-            thinkFinalized = true;
-            contentEl = document.createElement('div');
-            contentEl.className = 'chat-content';
-            thinkingEl.appendChild(contentEl);
-          }
-          full += '\n\n::ToolCall::' + tname + (tdetail ? '::' + tdetail : '') + '::\n\n';
-          contentEl.innerHTML = streamRender(full);
-          body.scrollTop = body.scrollHeight;
+          ensureContent();
+          const mark = '\n\n::ToolCall::' + tname + (tdetail ? '::' + tdetail : '') + '::\n\n';
+          full += mark;
+          renderer.push(mark);
           continue;
         }
-        // 正文到达: 定格思考, 正文打字机(工具标记芯片随文实时渲染)
-        if (!contentEl) {
-          finalizeThinkEl(thinkingEl, thinkFull);
-          thinkLive = null;
-          thinkFinalized = true;
-          contentEl = document.createElement('div');
-          contentEl.className = 'chat-content';
-          thinkingEl.appendChild(contentEl);
-        }
+        // 正文到达: 定格思考, 正文打字机(markdown 与工具芯片随文实时渲染)
+        ensureContent();
         full += data;
-        contentEl.innerHTML = streamRender(full);
-        body.scrollTop = body.scrollHeight;
+        renderer.push(data);
       }
     }
     if (!full) throw new Error('AI 没有返回内容');
-    finalizeBotMsg(thinkingEl, full, { think: thinkFull });
+    finalizeBotMsg(thinkingEl, full, { think: thinkFull, renderer: renderer });
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: full });
     updateChatClearBtn();
@@ -2247,7 +2481,7 @@ async function sendChat() {
     if (e.name === 'AbortError') {
       if (!full) { thinkingEl.remove(); }
       else {
-        finalizeBotMsg(thinkingEl, full, { think: thinkFull });
+        finalizeBotMsg(thinkingEl, full, { think: thinkFull, renderer: renderer });
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: full });
         updateChatClearBtn();
@@ -2261,7 +2495,8 @@ async function sendChat() {
     chatAbort = null;
     setSendState(false);
   }
-  body.scrollTop = body.scrollHeight;
+  // 收尾滚动同样只在贴底时进行(阈值放宽以覆盖新追加的操作栏高度)
+  if (body.scrollHeight - body.scrollTop - body.clientHeight < 80) body.scrollTop = body.scrollHeight;
 }
 
 // 思考链折叠块 DOM(默认收起, 点击展开; 返回元素便于保留折叠状态)
@@ -2297,11 +2532,96 @@ function toolChipHtml(name) {
     '<span class="tool-chip-label">调用工具 ' + name + '</span></span>';
 }
 
-// 流式渲染: 转义正文 + 工具标记渲染成芯片(打字机阶段无 markdown, 避免未闭合语法闪烁)
-function streamRender(t) {
-  return escHtml(t).replace(TOOL_MARK_RE, function (m, n) {
-    return toolChipHtml(n);
-  });
+// 乐观闭合: 给流式尾部未配对的 ` ** * 补上闭合符, 让行内代码/粗体/斜体即刻成型
+// 真正的闭合符到达时渲染结果完全一致 —— 全程零跳变
+// 只作用于最后一行: 已被后续内容封口的块不再补全, 提交进 DOM 的永远是最终形态
+function closeOpenMarks(text) {
+  if (!text) return text;
+  // 代码围栏内不补行内标记(围栏本身由 parseBlocks 兜底成型)
+  if ((text.match(/^```/gm) || []).length % 2) return text;
+  const cut = text.lastIndexOf('\n') + 1;
+  const head = text.slice(0, cut), line = text.slice(cut);
+  if (!line) return text;
+  // 行内代码优先: 奇数个反引号 = 有开口, 且代码内的星号不算标记
+  if ((line.match(/`/g) || []).length % 2) return head + line + '`';
+  // 挖掉已配对的部分, 残留的孤立标记即开口; 开口须紧跟非空白 —— "select * from" / "3 * 4" 不误判
+  const rest = line.replace(/`[^`\n]*`/g, '')
+    .replace(/\*\*\S(?:[^*\n]*\S)?\*\*/g, '')
+    .replace(/\*\S(?:[^*\n]*\S)?\*/g, '');
+  if (/\*\*\S[^*\n]*$/.test(rest)) return head + line + '**';
+  if (/\*\S[^*\n]*$/.test(rest)) return head + line + '*';
+  return text;
+}
+
+// 贴底跟随: 仅在用户已停留底部附近时才自动滚动 —— 打字中往上翻历史不会被强行拽回
+function scrollFollow(el, fn) {
+  const stick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  fn();
+  if (stick) el.scrollTop = el.scrollHeight;
+}
+
+// 工具标记须整块吐出(切一半会渲染成裸文本); 标记后紧跟换行, 以此定边界
+function alignMark(s, n) {
+  const i = s.lastIndexOf('::ToolCall::', n);
+  if (i < 0) return n;
+  const nl = s.indexOf('\n', i);
+  const end = nl < 0 ? s.length : nl;
+  return end > n ? end : n;
+}
+
+// 流式增量渲染器: 每帧全量重解析(纯字符串, 微秒级), 但只有最后一个块进 DOM
+// 已封口的块固化后永不再动 —— 打字时文本选区不丢失、代码复制按钮不失效、长回答无性能劣化
+function createStreamRenderer(container, scroller) {
+  const tail = document.createElement('div');
+  tail.className = 'md-tail';
+  container.appendChild(tail);
+
+  let shown = '', queue = '', committed = 0, raf = 0;
+
+  function paint() {
+    scrollFollow(scroller, function () {
+      const blocks = parseBlocks(closeOpenMarks(shown));
+      const stable = Math.max(0, blocks.length - 1);   // 除最后一块外均已封口
+      for (let i = committed; i < stable; i++) {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = blocks[i].html;
+        const node = tpl.content.firstElementChild;
+        if (node) container.insertBefore(node, tail);
+        if (blocks[i].type === 'code') addCodeCopyButtons(container);   // 代码块固化即可复制, 不必等整条回答结束
+      }
+      committed = stable;
+      tail.innerHTML = blocks.length ? blocks[blocks.length - 1].html : '';
+    });
+  }
+
+  // 平滑缓冲: 积压越多吐越快, 把忽快忽慢的 token 到达抹成匀速打字
+  function tick() {
+    raf = 0;
+    const step = Math.max(2, Math.ceil(queue.length / 8));
+    const take = alignMark(queue, Math.min(step, queue.length));
+    shown += queue.slice(0, take);
+    queue = queue.slice(take);
+    paint();
+    if (queue) raf = requestAnimationFrame(tick);
+  }
+
+  return {
+    push: function (t) {
+      if (!t) return;
+      queue += t;
+      if (!raf) raf = requestAnimationFrame(tick);
+    },
+    // 收尾: 立即排空缓冲, tail 内容并入正文并解散容器 —— 最终 DOM 与整段渲染一致, 零跳变
+    finish: function () {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      shown += queue;
+      queue = '';
+      paint();
+      while (tail.firstChild) container.insertBefore(tail.firstChild, tail);
+      tail.remove();
+      addCodeCopyButtons(container);
+    }
+  };
 }
 
 // HTML 转义(打字机/思考链用, 避免渲染成标签)

@@ -27,6 +27,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductMapper productMapper;
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     @Override
     public int insert(Product product) {
         product.setCreateTime(new Date());
@@ -41,7 +43,15 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public int delete(long id) {
-
+        // 外键引用检查: 有业务记录(采购明细/销售明细/出入库流水)的商品不允许物理删除, 引导下架
+        Long refs = jdbcTemplate.queryForObject(
+                "SELECT (SELECT COUNT(*) FROM purchase_order_detail WHERE product_id = ?) + " +
+                        "(SELECT COUNT(*) FROM sale_order_detail WHERE product_id = ?) + " +
+                        "(SELECT COUNT(*) FROM stock_record WHERE product_id = ?)",
+                Long.class, id, id, id);
+        if (refs != null && refs > 0) {
+            throw new RuntimeException("该商品已有业务记录，无法删除，可改为下架");
+        }
         var rows= productMapper.deleteByPrimaryKey(id);
         stringRedisTemplate.delete(CacheKeys.PRODUCT_LIST);
         return rows;
