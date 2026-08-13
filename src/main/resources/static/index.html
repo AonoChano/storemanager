@@ -2379,19 +2379,33 @@ async function sendChat() {
   appendMsg(text, 'user');
   const thinkingEl = appendMsg('', 'bot', { typing: true });
   let full = '';
-  let thinkFull = '';
-  let thinkLive = null;    // 思考滚筒(首次收到 [THINK] 时创建): 单行遮罩窗口, 行从下往上滚过
+  let thinkFull = '';      // 思考全文(错误路径兜底用)
+  let thinkLive = null;    // 当前进行中的思考滚筒(.think-live-text); 每段思考独立成块(工具调用后各段都显示)
   let thinkPartial = '';   // 滚筒里未换行的进行中行(增量跨 chunk 拼接用)
-  let thinkFinalized = false;  // 滚筒已定格为折叠块(工具调用/正文出现后, 后续思考只更新折叠内容)
   let contentEl = null;    // 正文打字机容器(首次正文/工具标记出现时创建)
   let renderer = null;     // 正文增量渲染器(块级冻结 + 乐观闭合 + 平滑缓冲)
   const body = document.getElementById('chatBody');
-  // 首次正文/工具标记到达: 定格思考显示, 建正文容器与增量渲染器
+  // 定格当前思考段: 进行中的滚筒 → 独立折叠块(每段思考各一块, 工具调用后的思考也会显示)
+  const sealThinkSegment = () => {
+    if (!thinkLive) return;
+    const lines = Array.from(thinkLive.querySelectorAll('.think-row')).map(r => r.textContent);
+    if (thinkPartial) lines.push(thinkPartial);
+    thinkPartial = '';
+    const d = document.createElement('details');
+    d.className = 'chat-think';
+    d.innerHTML = '<summary>' + THINK_ICON + '<span>思考过程</span></summary><div class="chat-think-body"></div>';
+    d.querySelector('.chat-think-body').textContent = lines.join('\n');
+    thinkLive.parentElement.replaceWith(d);
+    thinkLive = null;
+  };
+  // 首次正文/工具标记到达: 定格当前思考段, 建正文容器与增量渲染器
   const ensureContent = () => {
     if (contentEl) return;
-    finalizeThinkEl(thinkingEl, thinkFull);
-    thinkLive = null;
-    thinkFinalized = true;
+    sealThinkSegment();
+    if (thinkingEl.classList.contains('chat-thinking')) {
+      thinkingEl.className = 'chat-msg bot';
+      thinkingEl.innerHTML = '';
+    }
     contentEl = document.createElement('div');
     contentEl.className = 'chat-content';
     thinkingEl.appendChild(contentEl);
@@ -2429,23 +2443,17 @@ async function sendChat() {
         if (data.startsWith('[ERROR]')) throw new Error(data.slice(7));
         if (data.startsWith('[THINK]')) {
           thinkFull += data.slice(7);
-          // 滚筒已定格(工具调用/正文之后): 只更新折叠块内容, 保留展开状态
-          if (thinkFinalized) {
-            let tb = thinkingEl.querySelector('.chat-think-body');
-            // 思考来得晚(正文先出): 折叠块尚不存在则补插到最前
-            if (!tb && thinkFull) {
-              thinkingEl.insertBefore(createThinkDetails(thinkFull), thinkingEl.firstChild);
-              tb = thinkingEl.querySelector('.chat-think-body');
-            }
-            if (tb) tb.textContent = thinkFull;
-            continue;
-          }
-          // 思考链首字到达: "正在思考..."原地变成滚筒(单行遮罩窗口)
+          // 无活跃滚筒 → 开启新思考段(工具调用后/正文后的思考各成独立段): 新建滚筒追加到消息末尾
           if (!thinkLive) {
-            thinkingEl.classList.remove('chat-thinking');
-            thinkingEl.className = 'chat-think-live';
-            thinkingEl.innerHTML = THINK_ICON + '<div class="think-live-text"></div>';
-            thinkLive = thinkingEl.querySelector('.think-live-text');
+            if (thinkingEl.classList.contains('chat-thinking')) {
+              thinkingEl.className = 'chat-msg bot';
+              thinkingEl.innerHTML = '';
+            }
+            const roller = document.createElement('div');
+            roller.className = 'chat-think-live';
+            roller.innerHTML = THINK_ICON + '<div class="think-live-text"></div>';
+            thinkingEl.appendChild(roller);
+            thinkLive = roller.querySelector('.think-live-text');
           }
           // 增量按换行分割成行, 追加到滚筒底部
           thinkPartial += data.slice(7);
@@ -2484,6 +2492,7 @@ async function sendChat() {
       }
     }
     if (!full) throw new Error('AI 没有返回内容');
+    sealThinkSegment();   // [DONE] 后定格最后一段思考
     finalizeBotMsg(thinkingEl, full, { think: thinkFull, renderer: renderer });
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: full });
@@ -2492,6 +2501,7 @@ async function sendChat() {
     if (e.name === 'AbortError') {
       if (!full) { thinkingEl.remove(); }
       else {
+        sealThinkSegment();
         finalizeBotMsg(thinkingEl, full, { think: thinkFull, renderer: renderer });
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: full });
@@ -2521,16 +2531,6 @@ function createThinkDetails(t) {
 
 // 思考显示定格: "正在思考"指示器/滚筒 → 折叠块
 // 仅首次过渡时重建(此时尚无正文/工具容器); 已有内容容器时只补缺失的折叠块, 不动已有结构
-function finalizeThinkEl(el, thinkFull) {
-  const wasIndicator = el.classList.contains('chat-thinking') || el.classList.contains('chat-think-live');
-  el.classList.remove('chat-thinking', 'chat-think-live');
-  el.className = 'chat-msg bot';
-  if (wasIndicator) el.innerHTML = '';
-  if (thinkFull && !el.querySelector('.chat-think')) {
-    el.insertBefore(createThinkDetails(thinkFull), el.firstChild);
-  }
-}
-
 // 工具调用标记(注入正文流的结构化文本, 参与模型上下文; 类似 @文件 的 md 形式)
 // 格式: ::ToolCall::工具名:: 或 ::ToolCall::工具名::参数明细::
 // 前端渲染时识别该标记 → 银灰芯片; 原始文本对模型依然可读
@@ -2587,21 +2587,28 @@ function createStreamRenderer(container, scroller) {
   tail.className = 'md-tail';
   container.appendChild(tail);
 
-  let shown = '', queue = '', committed = 0, raf = 0;
+  let shown = '', queue = '', committed = 0, raf = 0, lastCut = -1;
 
   function paint() {
     scrollFollow(scroller, function () {
-      const blocks = parseBlocks(closeOpenMarks(shown));
-      const stable = Math.max(0, blocks.length - 1);   // 除最后一块外均已封口
-      for (let i = committed; i < stable; i++) {
-        const tpl = document.createElement('template');
-        tpl.innerHTML = blocks[i].html;
-        const node = tpl.content.firstElementChild;
-        if (node) container.insertBefore(node, tail);
-        if (blocks[i].type === 'code') addCodeCopyButtons(container);   // 代码块固化即可复制, 不必等整条回答结束
+      // 最后一行尚未换行, 其块归属未定("2" 下一刻可能变成 "2." 并入上面的列表),
+      // 故封口判定只看最后一个换行符之前的内容, 并再留一个块作缓冲
+      const cut = shown.lastIndexOf('\n') + 1;
+      if (cut !== lastCut) {
+        lastCut = cut;
+        const settled = parseBlocks(shown.slice(0, cut));
+        for (let i = committed; i < settled.length - 1; i++) {
+          const tpl = document.createElement('template');
+          tpl.innerHTML = settled[i].html;
+          const node = tpl.content.firstElementChild;
+          if (node) container.insertBefore(node, tail);
+          if (settled[i].type === 'code') addCodeCopyButtons(container);   // 代码块固化即可复制, 不必等整条回答结束
+        }
+        committed = Math.max(committed, settled.length - 1);
       }
-      committed = stable;
-      tail.innerHTML = blocks.length ? blocks[blocks.length - 1].html : '';
+      // 未固化的部分(含乐观闭合)每帧重绘 —— DOM 变更只发生在这里
+      const blocks = parseBlocks(closeOpenMarks(shown));
+      tail.innerHTML = blocks.slice(committed).map(b => b.html).join('');
     });
   }
 
