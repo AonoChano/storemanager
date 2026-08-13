@@ -2282,7 +2282,8 @@ function finalizeBotMsg(el, fullText, opts) {
   if (contentEl) {
     // 流式路径: 排空缓冲、合并 tail 容器, 复用已渲染的 DOM —— 收尾零跳变, 不再整段重建
     if (opts.renderer) opts.renderer.finish();
-    else contentEl.innerHTML = renderMarkdown(fullText);
+    else if (!opts.keepSegments) contentEl.innerHTML = renderMarkdown(fullText);
+    // keepSegments: 多段正文已由 finishSegments 分段渲染(思考块穿插在段间), 这里不动 DOM
   } else {
     // 非流式路径(错误消息等): 整块渲染
     el.innerHTML = '';
@@ -2382,8 +2383,10 @@ async function sendChat() {
   let thinkFull = '';      // 思考全文(错误路径兜底用)
   let thinkLive = null;    // 当前进行中的思考滚筒(.think-live-text); 每段思考独立成块(工具调用后各段都显示)
   let thinkPartial = '';   // 滚筒里未换行的进行中行(增量跨 chunk 拼接用)
-  let contentEl = null;    // 正文打字机容器(首次正文/工具标记出现时创建)
+  let contentEl = null;    // 当前活跃正文容器(思考段开启时冻结, 后续正文另起容器, 思考块固定在触发位置)
   let renderer = null;     // 正文增量渲染器(块级冻结 + 乐观闭合 + 平滑缓冲)
+  let segText = '';        // 当前正文段文本(含工具标记)
+  let segs = [];           // 已冻结正文段 [{el, text}]
   const body = document.getElementById('chatBody');
   // 定格当前思考段: 进行中的滚筒 → 独立折叠块(每段思考各一块, 工具调用后的思考也会显示)
   const sealThinkSegment = () => {
@@ -2398,6 +2401,18 @@ async function sendChat() {
     thinkLive.parentElement.replaceWith(d);
     thinkLive = null;
   };
+  // 收尾: 冻结最后一段正文, 各段独立 markdown 渲染(保持思考块在流中的穿插位置)
+  const finishSegments = () => {
+    if (contentEl) {
+      if (renderer) renderer.finish();
+      segs.push({ el: contentEl, text: segText });
+      contentEl = null; segText = ''; renderer = null;
+    }
+    segs.forEach(s => {
+      s.el.innerHTML = renderMarkdown(s.text);
+      addCodeCopyButtons(s.el);
+    });
+  };
   // 首次正文/工具标记到达: 定格当前思考段, 建正文容器与增量渲染器
   const ensureContent = () => {
     if (contentEl) return;
@@ -2410,6 +2425,7 @@ async function sendChat() {
     contentEl.className = 'chat-content';
     thinkingEl.appendChild(contentEl);
     renderer = createStreamRenderer(contentEl, body);
+    segText = '';
   };
   chatAbort = new AbortController();
   setSendState(true);
@@ -2448,6 +2464,11 @@ async function sendChat() {
             if (thinkingEl.classList.contains('chat-thinking')) {
               thinkingEl.className = 'chat-msg bot';
               thinkingEl.innerHTML = '';
+            } else if (contentEl) {
+              // 正文后开启新思考段: 冻结当前正文段, 后续正文另起容器 → 思考块固定在触发位置而非消息末尾
+              if (renderer) renderer.finish();
+              segs.push({ el: contentEl, text: segText });
+              contentEl = null; segText = ''; renderer = null;
             }
             const roller = document.createElement('div');
             roller.className = 'chat-think-live';
@@ -2482,18 +2503,21 @@ async function sendChat() {
           ensureContent();
           const mark = '\n\n::ToolCall::' + tname + (tdetail ? '::' + tdetail : '') + '::\n\n';
           full += mark;
+          segText += mark;
           renderer.push(mark);
           continue;
         }
         // 正文到达: 定格思考, 正文打字机(markdown 与工具芯片随文实时渲染)
         ensureContent();
         full += data;
+        segText += data;
         renderer.push(data);
       }
     }
     if (!full) throw new Error('AI 没有返回内容');
     sealThinkSegment();   // [DONE] 后定格最后一段思考
-    finalizeBotMsg(thinkingEl, full, { think: thinkFull, renderer: renderer });
+    finishSegments();     // 冻结最后一段正文, 各段独立渲染(思考块保持穿插位置)
+    finalizeBotMsg(thinkingEl, full, { think: thinkFull, keepSegments: true });
     chatHistory.push({ role: 'user', content: text });
     chatHistory.push({ role: 'assistant', content: full });
     updateChatClearBtn();
@@ -2502,7 +2526,8 @@ async function sendChat() {
       if (!full) { thinkingEl.remove(); }
       else {
         sealThinkSegment();
-        finalizeBotMsg(thinkingEl, full, { think: thinkFull, renderer: renderer });
+        finishSegments();
+        finalizeBotMsg(thinkingEl, full, { think: thinkFull, keepSegments: true });
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: full });
         updateChatClearBtn();
