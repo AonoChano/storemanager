@@ -27,6 +27,12 @@
     --radius-sm: 9px;
   }
   * { box-sizing: border-box; }
+  /* 滚动条美化(全局): 细条 + 圆角 + 主题色; Firefox 用 scrollbar-width/color 同步 */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
   html { color-scheme: light; }
   html[data-theme="dark"] { color-scheme: dark; }
   body {
@@ -603,7 +609,9 @@
   .chat-msg.bot code { font-family: Consolas, Monaco, "Courier New", monospace; background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
   .chat-msg.bot ul, .chat-msg.bot ol { margin: 2px 0 6px; padding-left: 18px; }
   .chat-msg.bot li { margin: 2px 0; }
-  .chat-msg.bot table { border-collapse: collapse; margin: 8px 0; font-size: 12.5px; }
+  .chat-msg.bot .table-scroll { overflow-x: auto; max-width: 100%; margin: 8px 0; }
+  .chat-msg.bot .table-scroll table { width: max-content; min-width: 100%; }
+  .chat-msg.bot table { border-collapse: collapse; font-size: 12.5px; }
   .chat-msg.bot th, .chat-msg.bot td { border: 1px solid var(--border); padding: 5px 9px; }
   .chat-msg.bot th { background: var(--th-bg); }
   .chat-msg.bot a { color: var(--accent); }
@@ -2120,7 +2128,7 @@ function parseBlocks(text) {
         const cells = r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
         t += '<tr>' + cells.map(c => (i === 0 ? '<th>' : '<td>') + renderInline(escHtml(c)) + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>';
       });
-      push('table', t + '</table>');
+      push('table', '<div class="table-scroll">' + t + '</table></div>');
     } else {
       table.forEach(l => para.push(l));
       flushPara();
