@@ -542,9 +542,16 @@
     font-size: 12px; letter-spacing: .06em; transition: color .15s;
   }
   .chat-think summary::-webkit-details-marker { display: none; }
-  /* 展开箭头放右侧(标题/图标靠左, 箭头右对齐) */
-  .chat-think summary::after { content: '▸'; margin-left: auto; font-size: 15px; line-height: 1; transition: transform .18s ease; }
-  .chat-think[open] summary::after { transform: rotate(90deg); }
+  /* 展开箭头: chevron 图标放右侧(mask 继承文字色, 丝滑旋转: 收起朝右 → 展开朝下) */
+  .chat-think summary::after {
+    content: ''; width: 15px; height: 15px; flex-shrink: 0; margin-left: auto;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center/contain no-repeat;
+    transform: rotate(-90deg);
+    transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+  }
+  .chat-think[open] summary::after { transform: rotate(0deg); }
   .chat-think summary:hover { color: var(--text); }
   .chat-think summary svg { flex-shrink: 0; }
   .chat-think-body {
