@@ -548,10 +548,10 @@
     background: currentColor;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center/contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center/contain no-repeat;
-    transform: rotate(-90deg);
+    transform: rotate(0deg);
     transition: transform .28s cubic-bezier(.4, 0, .2, 1);
   }
-  .chat-think[open] summary::after { transform: rotate(0deg); }
+  .chat-think[open] summary::after { transform: rotate(-180deg); }
   .chat-think summary:hover { color: var(--text); }
   .chat-think summary svg { flex-shrink: 0; }
   .chat-think-body {
